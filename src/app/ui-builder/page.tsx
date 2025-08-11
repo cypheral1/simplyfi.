@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,8 +61,8 @@ const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
     <Card {...props}>
       <CardHeader>
         <CardTitle>{props.title || 'Card Title'}</CardTitle>
-        <CardDescription>{props.description || 'Card Description'}</CardHeader>
-      </CardContent>
+        <CardDescription>{props.description || 'Card Description'}</CardDescription>
+      </CardHeader>
       <CardContent>
         <p>{props.content || 'Card content goes here.'}</p>
       </CardContent>
@@ -680,5 +680,3 @@ export default function UiBuilderPage() {
     </DndContext>
   );
 }
-
-    
