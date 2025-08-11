@@ -1,23 +1,19 @@
 "use server";
 
-import { generateCode } from "@/ai/flows/generate-code-from-prompt";
+import { conversationalCodeGeneration } from "@/ai/flows/conversational-code-flow";
 import { z } from "zod";
 
-const GenerateCodeActionSchema = z.object({
+const ConversationalCodeGenerationActionSchema = z.object({
   prompt: z.string(),
-  language: z.string(),
 });
 
-export async function generateCodeAction(input: z.infer<typeof GenerateCodeActionSchema>) {
-  const validatedInput = GenerateCodeActionSchema.parse(input);
-
-  const fullPrompt = `Generate a ${validatedInput.language} code snippet based on the following prompt. The code should be complete and runnable. Only output the raw code, without any markdown fences or explanations.\n\nPrompt: ${validatedInput.prompt}`;
-
+export async function conversationalCodeGenerationAction(input: z.infer<typeof ConversationalCodeGenerationActionSchema>) {
+  const validatedInput = ConversationalCodeGenerationActionSchema.parse(input);
   try {
-    const result = await generateCode({ prompt: fullPrompt });
-    return { success: true, code: result.code };
+    const result = await conversationalCodeGeneration({ prompt: validatedInput.prompt });
+    return { success: true, response: result.response };
   } catch (error) {
     console.error("Error generating code:", error);
-    return { success: false, error: "Failed to generate code." };
+    return { success: false, error: "Failed to generate response." };
   }
 }

@@ -1,5 +1,5 @@
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/generate-code-from-prompt.ts';
+import '@/ai/flows/conversational-code-flow.ts';
 import '@/ai/flows/improve-code-quality.ts';
