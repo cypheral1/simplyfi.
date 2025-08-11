@@ -21,17 +21,15 @@ export default function ChatInterface() {
   const [isGenerating, startGenerateTransition] = useTransition();
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-        // A bit of a hack to scroll to the bottom.
-        // The viewport is the first child of the ref.
-        const viewport = scrollAreaRef.current.children[0];
-        if (viewport) {
-            viewport.scrollTop = viewport.scrollHeight;
-        }
-    }
-  }, [messages]);
+    scrollToBottom();
+  }, [messages, isGenerating]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,6 +101,7 @@ export default function ChatInterface() {
                 </div>
             )}
         </div>
+        <div ref={messagesEndRef} />
       </ScrollArea>
       <form onSubmit={handleSubmit} className="flex items-center gap-2 border-t pt-4">
         <Textarea
