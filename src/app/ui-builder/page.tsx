@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from '@/components/ui/input';
@@ -115,12 +115,15 @@ export default function UiBuilderPage() {
   const getActiveComponentData = () => {
     if (!activeId) return null;
     const canvasComp = canvasComponents.find(c => c.id === activeId);
-    if (canvasComp) return canvasComp;
+    if (canvasComp) return { ...canvasComp, isPaletteItem: false };
     
     const paletteId = activeId.toString();
     if (paletteId.startsWith('palette-')) {
       const type = paletteId.replace('palette-', '');
-      return availableComponents.find(c => c.id === type);
+      const item = availableComponents.find(c => c.id === type);
+      if (item) {
+        return { ...item, type: item.id, isPaletteItem: true };
+      }
     }
     return null;
   }
@@ -140,7 +143,7 @@ export default function UiBuilderPage() {
       if (over.id === 'canvas-droppable' || canvasComponents.some(c => c.id === over.id)) {
         const { id, name } = active.data.current as { id: string; name: string };
         const newComponent: Component = {
-          id: `${id}-${Date.now()}`, // Use timestamp for more robust unique ID
+          id: `${id}-${Date.now()}`,
           type: id,
           name,
         };
@@ -149,11 +152,11 @@ export default function UiBuilderPage() {
         
         if (overIndex !== -1) {
           // Insert at the position of the item it was dropped on
-          setCanvasComponents(items => [
-            ...items.slice(0, overIndex),
-            newComponent,
-            ...items.slice(overIndex)
-          ]);
+          setCanvasComponents(items => {
+            const newItems = [...items];
+            newItems.splice(overIndex, 0, newComponent);
+            return newItems;
+          });
         } else {
           // Add to the end if dropped on the canvas itself
           setCanvasComponents(items => [...items, newComponent]);
