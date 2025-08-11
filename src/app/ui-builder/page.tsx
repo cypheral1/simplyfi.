@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from '@/components/ui/input';
@@ -21,17 +21,31 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2 } from 'lucide-react';
+import { GripVertical, Trash2, Code, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { saveComponentToFile } from './actions';
+
 
 // Component Definitions
 const availableComponents = [
-  { id: 'button', name: 'Button' },
-  { id: 'card', name: 'Card' },
-  { id: 'input', name: 'Input' },
-  { id: 'h1', name: 'Heading 1' },
-  { id: 'p', name: 'Paragraph' },
-  { id: 'textarea', name: 'Text Area' },
+  { id: 'h1', name: 'Heading 1', icon: () => <span className="font-bold text-xl">H1</span> },
+  { id: 'p', name: 'Paragraph', icon: () => <span className="text-sm">P</span> },
+  { id: 'button', name: 'Button', icon: () => <Button size="sm" variant="outline" className="pointer-events-none h-auto py-1">Button</Button> },
+  { id: 'input', name: 'Input', icon: () => <Input className="pointer-events-none h-8" placeholder="Input" /> },
+  { id: 'textarea', name: 'Text Area', icon: () => <Textarea className="pointer-events-none h-8" placeholder="Textarea" /> },
+  { id: 'card', name: 'Card', icon: () => <div className="pointer-events-none border rounded-md p-1 text-xs">Card</div> },
+  { id: 'checkbox', name: 'Checkbox', icon: () => <div className="flex items-center gap-2 pointer-events-none"><Checkbox id="palette-check" /><Label htmlFor="palette-check" className="text-xs">Checkbox</Label></div> },
+  { id: 'switch', name: 'Switch', icon: () => <Switch className="pointer-events-none" /> },
+  { id: 'select', name: 'Select', icon: () => <div className="text-xs pointer-events-none">Select</div> },
+  { id: 'slider', name: 'Slider', icon: () => <Slider defaultValue={[50]} className="w-16 pointer-events-none" /> },
+  { id: 'avatar', name: 'Avatar', icon: () => <Avatar className="w-8 h-8 pointer-events-none"><AvatarFallback>AV</AvatarFallback></Avatar> },
 ];
 
 type Component = {
@@ -42,7 +56,7 @@ type Component = {
 };
 
 const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
-  button: (props) => <Button {...props}>{props.text || 'Click me'}</Button>,
+  button: (props) => <Button {...props}>{props.children || 'Click me'}</Button>,
   card: (props) => (
     <Card {...props}>
       <CardHeader>
@@ -54,12 +68,47 @@ const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
     </Card>
   ),
   input: (props) => <Input {...props} placeholder={props.placeholder || 'Input field'} />,
-  h1: (props) => <h1 {...props} className="text-4xl font-bold tracking-tight">{props.text || 'Heading 1'}</h1>,
-  p: (props) => <p {...props}>{props.text || 'This is a paragraph of text.'}</p>,
+  h1: (props) => <h1 {...props} className="text-4xl font-bold tracking-tight">{props.children || 'Heading 1'}</h1>,
+  p: (props) => <p {...props}>{props.children || 'This is a paragraph of text.'}</p>,
   textarea: (props) => <Textarea {...props} placeholder={props.placeholder || 'Text area'} />,
+  checkbox: (props) => <div className="flex items-center space-x-2"><Checkbox id={props.id || 'checkbox'} checked={props.checked} /><Label htmlFor={props.id || 'checkbox'}>{props.children || 'Accept terms'}</Label></div>,
+  select: (props) => (
+    <Select value={props.value}>
+      <SelectTrigger className="w-[180px]">
+        <SelectValue placeholder={props.placeholder || "Select an option"} />
+      </SelectTrigger>
+      <SelectContent>
+        {(props.options || ['Option 1', 'Option 2', 'Option 3']).map((opt: string) => (
+            <SelectItem key={opt} value={opt.toLowerCase().replace(' ','-')}>{opt}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  ),
+  switch: (props) => <div className="flex items-center space-x-2"><Switch id={props.id || 'switch'} checked={props.checked} /><Label htmlFor={props.id || 'switch'}>{props.children || 'Toggle me'}</Label></div>,
+  slider: (props) => <Slider {...props} defaultValue={[props.defaultValue]} max={props.max} step={props.step} className="w-full" />,
+  avatar: (props) => (
+    <Avatar {...props}>
+      <AvatarImage src={props.src || 'https://github.com/shadcn.png'} alt={props.alt || '@shadcn'} />
+      <AvatarFallback>{props.fallback || 'CN'}</AvatarFallback>
+    </Avatar>
+  ),
 };
 
-function DraggableComponent({ id, name }: { id: string, name: string }) {
+const initialProps: { [key: string]: any } = {
+    h1: { children: 'Main Title' },
+    p: { children: 'A descriptive paragraph to elaborate.' },
+    button: { children: 'Click Me', variant: 'default', size: 'default' },
+    input: { placeholder: 'Enter text...', type: 'text' },
+    textarea: { placeholder: 'Enter a longer text...' },
+    card: { title: 'Card Title', content: 'This is the card content.' },
+    checkbox: { children: 'I agree', checked: false },
+    switch: { children: 'Airplane Mode', checked: false },
+    select: { placeholder: 'Select a fruit', options: ['Apple', 'Banana', 'Blueberry'] },
+    slider: { defaultValue: 50, max: 100, step: 1 },
+    avatar: { src: 'https://placehold.co/40x40.png', alt: 'User Avatar', fallback: 'AV' },
+}
+
+function DraggableComponent({ id, name, icon }: { id: string, name: string, icon: () => React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `palette-${id}`,
     data: { type: id, name, isPaletteItem: true }
@@ -71,10 +120,13 @@ function DraggableComponent({ id, name }: { id: string, name: string }) {
       style={{ transform: CSS.Translate.toString(transform) }}
       {...listeners}
       {...attributes}
-      className="border rounded-lg p-3 text-sm cursor-grab bg-card hover:bg-accent flex items-center gap-2"
+      className="border rounded-lg p-3 text-sm cursor-grab bg-card hover:bg-accent flex items-center gap-3"
     >
-      <GripVertical className="h-4 w-4 text-muted-foreground" />
-      {name}
+      <GripVertical className="h-5 w-5 text-muted-foreground" />
+      <div className="flex-1 flex items-center gap-2">
+        {icon()}
+        <span className="font-medium">{name}</span>
+      </div>
     </div>
   );
 }
@@ -110,10 +162,10 @@ function SortableComponent({ component, onRemove, onSelect, isSelected }: { comp
           isSelected ? "border-primary" : "border-transparent hover:border-dashed hover:border-muted-foreground/50"
       )}
     >
-       <div {...attributes} {...listeners} className="cursor-grab p-2 absolute top-1 left-1 z-10 opacity-20 group-hover:opacity-100 transition-opacity">
+       <div {...attributes} {...listeners} className="cursor-grab p-2 absolute top-1 left-1 z-10 opacity-20 group-hover:opacity-100 transition-opacity bg-background rounded-md">
           <GripVertical className="h-5 w-5 text-muted-foreground" />
        </div>
-       <Button variant="ghost" size="icon" className="h-7 w-7 absolute top-1 right-1 z-10 opacity-20 group-hover:opacity-100 transition-opacity" onClick={(e) => {
+       <Button variant="ghost" size="icon" className="h-7 w-7 absolute top-1 right-1 z-10 opacity-20 group-hover:opacity-100 transition-opacity bg-background rounded-md" onClick={(e) => {
            e.stopPropagation();
            onRemove(component.id);
        }}>
@@ -127,14 +179,17 @@ function SortableComponent({ component, onRemove, onSelect, isSelected }: { comp
 }
 
 function Canvas({ children, onSelect }: { children: React.ReactNode, onSelect: () => void }) {
-    const { setNodeRef } = useDroppable({
+    const { setNodeRef, isOver } = useDroppable({
         id: 'canvas-droppable',
     });
 
     return (
         <div 
           ref={setNodeRef} 
-          className="w-full min-h-full border-2 border-dashed rounded-lg p-4 space-y-4 bg-background"
+          className={cn(
+            "w-full min-h-full border-2 border-dashed rounded-lg p-4 space-y-4 bg-background transition-colors",
+            isOver ? "border-primary bg-primary/10" : "border-border"
+            )}
           onClick={onSelect}
         >
             {children}
@@ -162,9 +217,46 @@ function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedCompone
 
     const renderPropEditor = (propName: string, propValue: any) => {
         const key = `${selectedComponent.id}-${propName}`;
+        const type = typeof propValue;
+
+        if (propName === 'variant' && selectedComponent.type === 'button') {
+            return (
+                 <div key={key} className="space-y-2">
+                    <Label htmlFor={key} className="capitalize">{propName}</Label>
+                    <Select value={propValue} onValueChange={(val) => handlePropChange(propName, val)}>
+                        <SelectTrigger id={key}><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="default">Default</SelectItem>
+                            <SelectItem value="destructive">Destructive</SelectItem>
+                            <SelectItem value="outline">Outline</SelectItem>
+                            <SelectItem value="secondary">Secondary</SelectItem>
+                            <SelectItem value="ghost">Ghost</SelectItem>
+                            <SelectItem value="link">Link</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            )
+        }
         
-        // Simple heuristic to determine editor type
-        if (typeof propValue === 'string' && propValue.length > 50) {
+        if (type === 'boolean') {
+             return (
+                <div key={key} className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <Label htmlFor={key} className="capitalize">{propName}</Label>
+                    <Switch id={key} checked={propValue} onCheckedChange={(val) => handlePropChange(propName, val)} />
+                </div>
+            )
+        }
+
+        if (propName === 'options' && Array.isArray(propValue)) {
+            return (
+                 <div key={key} className="space-y-2">
+                    <Label htmlFor={key} className="capitalize">{propName} (comma separated)</Label>
+                    <Textarea id={key} value={propValue.join(', ')} onChange={(e) => handlePropChange(propName, e.target.value.split(',').map(s => s.trim()))} />
+                </div>
+            )
+        }
+        
+        if (type === 'string' && propValue.length > 30) {
             return (
                 <div key={key} className="space-y-2">
                     <Label htmlFor={key} className="capitalize">{propName}</Label>
@@ -173,11 +265,10 @@ function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedCompone
             )
         }
         
-        // Default to text input
         return (
             <div key={key} className="space-y-2">
                 <Label htmlFor={key} className="capitalize">{propName}</Label>
-                <Input id={key} type="text" value={propValue} onChange={(e) => handlePropChange(propName, e.target.value)} />
+                <Input id={key} type={type === 'number' ? 'number' : 'text'} value={propValue} onChange={(e) => handlePropChange(propName, type === 'number' ? parseFloat(e.target.value) : e.target.value)} />
             </div>
         )
     }
@@ -186,6 +277,7 @@ function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedCompone
         <Card className="sticky top-4">
             <CardHeader>
                 <CardTitle>{selectedComponent.name}</CardTitle>
+                <CardDescription>Type: {selectedComponent.type}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 {Object.entries(selectedComponent.props).map(([propName, propValue]) => renderPropEditor(propName, propValue))}
@@ -194,6 +286,163 @@ function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedCompone
     )
 }
 
+function generateJsx(components: Component[]): string {
+    const imports = new Set<string>();
+    const componentImports: {[key: string]: string[]} = {
+        h1: [], p: [],
+        button: ['Button'],
+        input: ['Input'],
+        textarea: ['Textarea'],
+        card: ['Card', 'CardContent', 'CardHeader', 'CardTitle'],
+        checkbox: ['Checkbox', 'Label'],
+        switch: ['Switch', 'Label'],
+        select: ['Select', 'SelectContent', 'SelectItem', 'SelectTrigger', 'SelectValue'],
+        slider: ['Slider'],
+        avatar: ['Avatar', 'AvatarFallback', 'AvatarImage'],
+    };
+
+    const componentCode = components.map(component => {
+        const { type, props } = component;
+        if (componentImports[type]) {
+            componentImports[type].forEach(imp => imports.add(imp));
+        }
+
+        const propToString = (prop: string, value: any): string => {
+            if (typeof value === 'string') return `${prop}="${value}"`;
+            if (typeof value === 'number') return `${prop}={${value}}`;
+            if (typeof value === 'boolean') return value ? prop : `${prop}={false}`;
+            if (Array.isArray(value)) return `${prop}={${JSON.stringify(value)}}`
+            return `${prop}="${value}"`;
+        };
+
+        const { children, ...restProps } = props;
+        const propsString = Object.entries(restProps)
+            .map(([key, value]) => propToString(key, value))
+            .join(' ');
+
+        const Comp = type.charAt(0).toUpperCase() + type.slice(1);
+        
+        switch (type) {
+            case 'h1':
+            case 'p':
+                return `<${type} ${propsString}>${children || ''}</${type}>`;
+            case 'input':
+            case 'textarea':
+            case 'slider':
+            case 'avatar':
+                return `<${Comp} ${propsString} />`;
+            case 'card':
+                return `<Card ${propsString}>\n  <CardHeader>\n    <CardTitle>${props.title || ''}</CardTitle>\n  </CardHeader>\n  <CardContent>\n    <p>${props.content || ''}</p>\n  </CardContent>\n</Card>`;
+            case 'checkbox':
+                return `<div className="flex items-center space-x-2">\n  <Checkbox id="${component.id}" ${propsString} />\n  <Label htmlFor="${component.id}">${children}</Label>\n</div>`;
+            case 'switch':
+                 return `<div className="flex items-center space-x-2">\n  <Switch id="${component.id}" ${propsString} />\n  <Label htmlFor="${component.id}">${children}</Label>\n</div>`;
+            case 'select':
+                return `<Select ${propsString}>\n  <SelectTrigger>\n    <SelectValue placeholder="${props.placeholder}" />\n  </SelectTrigger>\n  <SelectContent>\n    ${(props.options || []).map((opt:string) => `<SelectItem value="${opt.toLowerCase().replace(' ','-')}">${opt}</SelectItem>`).join('\n    ')}\n  </SelectContent>\n</Select>`
+            default:
+                 return `<${Comp} ${propsString}>${children || ''}</${Comp}>`;
+        }
+    }).join('\n\n');
+
+    const importString = `import { ${Array.from(imports).sort().join(', ')} } from '@/components/ui';`;
+
+    return `import React from 'react';\n${imports.size > 0 ? `${importString}\n` : ''}
+export default function GeneratedComponent() {
+  return (
+    <div className="space-y-4 p-4">
+${componentCode.split('\n').map(line => `      ${line}`).join('\n')}
+    </div>
+  );
+}`;
+}
+
+function CodeGenerationDialog({ components }: { components: Component[] }) {
+    const [open, setOpen] = useState(false);
+    const [componentName, setComponentName] = useState('MyNewComponent');
+    const [isSaving, setIsSaving] = useState(false);
+    const { toast } = useToast();
+    const jsxCode = generateJsx(components);
+
+    const handleSave = async () => {
+        if (!componentName.match(/^[A-Z][a-zA-Z0-9]*$/)) {
+            toast({
+                title: 'Invalid Component Name',
+                description: 'Component name must be PascalCase (e.g., MyComponent).',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const result = await saveComponentToFile({
+                componentName,
+                code: jsxCode,
+            });
+            if (result.success) {
+                toast({
+                    title: 'Component Saved!',
+                    description: `File saved at ${result.path}`,
+                });
+                setOpen(false);
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (error: any) {
+            toast({
+                title: 'Error Saving File',
+                description: error.message || 'An unknown error occurred.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm" disabled={components.length === 0}>
+                    <Code className="mr-2 h-4 w-4" />
+                    Generate Code
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+                <DialogHeader>
+                    <DialogTitle>Generated JSX Code</DialogTitle>
+                    <DialogDescription>
+                        Here is the code for the layout you built. You can copy it or save it as a new component file.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="relative">
+                    <pre className="bg-muted rounded-md p-4 h-[400px] overflow-auto text-sm">
+                        <code>{jsxCode}</code>
+                    </pre>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => navigator.clipboard.writeText(jsxCode).then(() => toast({ title: "Code copied!"}))}
+                    >
+                        Copy
+                    </Button>
+                </div>
+                <DialogFooter>
+                    <div className="flex items-center gap-2 w-full">
+                        <Input
+                            placeholder="ComponentName"
+                            value={componentName}
+                            onChange={(e) => setComponentName(e.target.value)}
+                        />
+                         <Button onClick={handleSave} disabled={isSaving}>
+                            {isSaving ? 'Saving...' : <><Download className="mr-2 h-4 w-4" /> Save as Component</>}
+                        </Button>
+                    </div>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 export default function UiBuilderPage() {
   const [canvasComponents, setCanvasComponents] = useState<Component[]>([]);
@@ -223,7 +472,7 @@ export default function UiBuilderPage() {
       const type = paletteId.replace('palette-', '');
       const item = availableComponents.find(c => c.id === type);
       if (item) {
-        return { id: item.id, name: item.name, type: item.id, isPaletteItem: true };
+        return { id: item.id, name: item.name, type: item.id, isPaletteItem: true, icon: item.icon };
       }
     }
     return null;
@@ -231,7 +480,7 @@ export default function UiBuilderPage() {
   const activeComponentData = getActiveComponentData();
   const selectedComponent = canvasComponents.find(c => c.id === selectedComponentId) || null;
 
-  function handleDragEnd(event: DragEndEvent) {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
   
@@ -239,22 +488,23 @@ export default function UiBuilderPage() {
       return;
     }
 
-    // Handle dropping a new component
+    const overId = over.id;
+    const overIsCanvas = overId === 'canvas-droppable';
+    const overIsSortable = canvasComponents.some(c => c.id === overId);
+
+    // Handle dropping a new component from the palette
     if (active.data.current?.isPaletteItem) {
       const { type, name } = active.data.current as { type: string, name: string };
       const newComponent: Component = {
         id: `${type}-${Date.now()}`,
         type,
         name,
-        props: type === 'button' ? { text: 'New Button' } : type === 'card' ? { title: 'New Card', content: 'Some default content.' } : type === 'input' ? { placeholder: 'New Input' } : type === 'h1' ? { text: 'New Heading' } : type === 'p' ? { text: 'New Paragraph' } : type === 'textarea' ? { placeholder: 'New Text Area' } : {},
+        props: initialProps[type] || {},
       };
 
-      const overId = over.id;
-      const overIsCanvas = overId === 'canvas-droppable';
-      
       if (overIsCanvas) {
         setCanvasComponents(items => [...items, newComponent]);
-      } else {
+      } else if(overIsSortable) {
         const overIndex = canvasComponents.findIndex(c => c.id === overId);
         if (overIndex !== -1) {
             setCanvasComponents(items => {
@@ -262,14 +512,14 @@ export default function UiBuilderPage() {
                 newItems.splice(overIndex, 0, newComponent);
                 return newItems;
             });
-        } else {
-            setCanvasComponents(items => [...items, newComponent]);
         }
       }
       setSelectedComponentId(newComponent.id);
+      return;
     } 
+    
     // Handle reordering an existing component
-    else if (active.id !== over.id) {
+    if (!active.data.current?.isPaletteItem && overIsSortable && active.id !== over.id) {
         setCanvasComponents((items) => {
             const oldIndex = items.findIndex((item) => item.id === active.id);
             const newIndex = items.findIndex((item) => item.id === over.id);
@@ -277,7 +527,8 @@ export default function UiBuilderPage() {
             return arrayMove(items, oldIndex, newIndex);
         });
     }
-  }
+  }, [canvasComponents]);
+
 
   function handleRemoveComponent(id: UniqueIdentifier) {
     if (selectedComponentId === id) {
@@ -304,7 +555,11 @@ export default function UiBuilderPage() {
   }
   
   if (!isClient) {
-    return null;
+    return (
+        <div className="flex h-[calc(100vh-4.1rem)] w-full items-center justify-center">
+            <p>Loading Builder...</p>
+        </div>
+    );
   }
 
   return (
@@ -316,11 +571,14 @@ export default function UiBuilderPage() {
     >
       <div className="flex h-[calc(100vh-4.1rem)] bg-background text-foreground">
         {/* Component Palette */}
-        <aside className="w-64 border-r p-4 space-y-4 bg-card overflow-y-auto">
-          <h2 className="text-lg font-semibold">Components</h2>
+        <aside className="w-72 border-r p-4 space-y-4 bg-card overflow-y-auto">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Components</h2>
+            <CodeGenerationDialog components={canvasComponents} />
+          </div>
           <div className="space-y-2">
             {availableComponents.map(comp => (
-              <DraggableComponent key={comp.id} id={comp.id} name={comp.name} />
+              <DraggableComponent key={comp.id} id={comp.id} name={comp.name} icon={comp.icon} />
             ))}
           </div>
         </aside>
@@ -358,9 +616,10 @@ export default function UiBuilderPage() {
       </div>
       <DragOverlay>
         {activeComponentData ? (
-            <div className="border rounded-lg p-3 text-sm cursor-grabbing bg-card shadow-lg flex items-center gap-2">
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
-                {activeComponentData?.name}
+            <div className="border rounded-lg p-3 text-sm cursor-grabbing bg-card shadow-lg flex items-center gap-3">
+                <GripVertical className="h-5 w-5 text-muted-foreground" />
+                {activeComponentData.icon && activeComponentData.icon()}
+                <span className="font-medium">{activeComponentData.name}</span>
             </div>
         ) : null}
       </DragOverlay>
