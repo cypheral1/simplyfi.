@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -98,6 +99,18 @@ function SortableComponent({ component, onRemove }: { component: Component, onRe
   );
 }
 
+function Canvas({ children }: { children: React.ReactNode }) {
+    const { setNodeRef } = useDroppable({
+        id: 'canvas-droppable',
+    });
+
+    return (
+        <div ref={setNodeRef} className="w-full min-h-full border-2 border-dashed rounded-lg flex flex-col p-4 space-y-4 bg-background">
+            {children}
+        </div>
+    )
+}
+
 
 export default function UiBuilderPage() {
   const [canvasComponents, setCanvasComponents] = useState<Component[]>([]);
@@ -107,10 +120,6 @@ export default function UiBuilderPage() {
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  const { setNodeRef } = useDroppable({
-    id: 'canvas-droppable',
-  });
 
   const getActiveComponentData = () => {
     if (!activeId) return null;
@@ -122,7 +131,7 @@ export default function UiBuilderPage() {
       const type = paletteId.replace('palette-', '');
       const item = availableComponents.find(c => c.id === type);
       if (item) {
-        return { ...item, type: item.id, isPaletteItem: true };
+        return { id: item.id, name: item.name, type: item.id, isPaletteItem: true };
       }
     }
     return null;
@@ -136,43 +145,43 @@ export default function UiBuilderPage() {
     if (!over) {
       return;
     }
-  
-    const isDroppingNewComponent = active.data.current?.isPaletteItem;
-    const isReordering = !isDroppingNewComponent;
-  
-    // Reordering existing components on the canvas
-    if (isReordering && over.id !== active.id) {
-      setCanvasComponents((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-        if (oldIndex === -1 || newIndex === -1) return items;
-        return arrayMove(items, oldIndex, newIndex);
-      });
-      return;
-    }
-  
-    // Dropping a new component from the palette
-    if (isDroppingNewComponent) {
-      const { type, name } = active.data.current as { type: string; name: string };
+
+    // Handle dropping a new component
+    if (active.data.current?.isPaletteItem) {
+      const { type, name } = active.data.current as { type: string, name: string };
       const newComponent: Component = {
         id: `${type}-${Date.now()}`,
         type,
         name,
       };
-      
+
       const overId = over.id;
       const overIsCanvas = overId === 'canvas-droppable';
-      const overIndex = canvasComponents.findIndex(c => c.id === overId);
-  
+      
       if (overIsCanvas) {
         setCanvasComponents(items => [...items, newComponent]);
-      } else if (overIndex !== -1) {
-        setCanvasComponents(items => {
-          const newItems = [...items];
-          newItems.splice(overIndex, 0, newComponent);
-          return newItems;
-        });
+      } else {
+        const overIndex = canvasComponents.findIndex(c => c.id === overId);
+        if (overIndex !== -1) {
+            setCanvasComponents(items => {
+                const newItems = [...items];
+                newItems.splice(overIndex, 0, newComponent);
+                return newItems;
+            });
+        } else {
+            // Fallback for when dropping on a component that isn't found (should not happen often)
+            setCanvasComponents(items => [...items, newComponent]);
+        }
       }
+    } 
+    // Handle reordering an existing component
+    else if (active.id !== over.id) {
+        setCanvasComponents((items) => {
+            const oldIndex = items.findIndex((item) => item.id === active.id);
+            const newIndex = items.findIndex((item) => item.id === over.id);
+            if (oldIndex === -1 || newIndex === -1) return items;
+            return arrayMove(items, oldIndex, newIndex);
+        });
     }
   }
 
@@ -203,22 +212,22 @@ export default function UiBuilderPage() {
 
         {/* Canvas Area */}
         <main className="flex-1 p-4 bg-muted/20 overflow-y-auto">
-          <div ref={setNodeRef} id="canvas-droppable" className="w-full min-h-full border-2 border-dashed rounded-lg flex flex-col p-4 space-y-4 bg-background">
-            {canvasComponents.length === 0 ? (
-               <div className="flex-1 flex items-center justify-center pointer-events-none">
-                <div className="text-center text-muted-foreground">
-                    <h3 className="text-xl font-semibold">Drag components here</h3>
-                    <p>Start building your UI by dragging from the left panel.</p>
-                </div>
-               </div>
-            ) : (
-                <SortableContext items={canvasComponents.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                    {canvasComponents.map(comp => (
-                        <SortableComponent key={comp.id} component={comp} onRemove={handleRemoveComponent} />
-                    ))}
-                </SortableContext>
-            )}
-          </div>
+            <Canvas>
+                {canvasComponents.length === 0 ? (
+                    <div className="flex-1 flex items-center justify-center pointer-events-none">
+                        <div className="text-center text-muted-foreground">
+                            <h3 className="text-xl font-semibold">Drag components here</h3>
+                            <p>Start building your UI by dragging from the left panel.</p>
+                        </div>
+                    </div>
+                ) : (
+                    <SortableContext items={canvasComponents.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                        {canvasComponents.map(comp => (
+                            <SortableComponent key={comp.id} component={comp} onRemove={handleRemoveComponent} />
+                        ))}
+                    </SortableContext>
+                )}
+            </Canvas>
         </main>
 
         {/* Properties Panel */}
@@ -234,7 +243,7 @@ export default function UiBuilderPage() {
         </aside>
       </div>
       <DragOverlay>
-        {activeId && activeComponentData ? (
+        {activeComponentData ? (
             <div className="border rounded-lg p-3 text-sm cursor-grabbing bg-card shadow-lg flex items-center gap-2">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
                 {activeComponentData?.name}
@@ -244,3 +253,5 @@ export default function UiBuilderPage() {
     </DndContext>
   );
 }
+
+    
