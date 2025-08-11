@@ -42,7 +42,7 @@ const componentMap: { [key: string]: React.ReactNode } = {
 function DraggableComponent({ id, name }: { id: string, name: string }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `palette-${id}`,
-    data: { id, name, isPaletteItem: true }
+    data: { type: id, name, isPaletteItem: true }
   });
 
   const style = {
@@ -133,48 +133,46 @@ export default function UiBuilderPage() {
     const { active, over } = event;
     setActiveId(null);
   
-    // Not dropping on a valid target
     if (!over) {
       return;
     }
   
-    // Dropping a new component from the palette
-    if (active.data.current?.isPaletteItem) {
-      if (over.id === 'canvas-droppable' || canvasComponents.some(c => c.id === over.id)) {
-        const { id, name } = active.data.current as { id: string; name: string };
-        const newComponent: Component = {
-          id: `${id}-${Date.now()}`,
-          type: id,
-          name,
-        };
-  
-        const overIndex = canvasComponents.findIndex(c => c.id === over.id);
-        
-        if (overIndex !== -1) {
-          // Insert at the position of the item it was dropped on
-          setCanvasComponents(items => {
-            const newItems = [...items];
-            newItems.splice(overIndex, 0, newComponent);
-            return newItems;
-          });
-        } else {
-          // Add to the end if dropped on the canvas itself
-          setCanvasComponents(items => [...items, newComponent]);
-        }
-      }
-      return;
-    }
+    const isDroppingNewComponent = active.data.current?.isPaletteItem;
+    const isReordering = !isDroppingNewComponent;
   
     // Reordering existing components on the canvas
-    if (!active.data.current?.isPaletteItem && over.id !== active.id) {
+    if (isReordering && over.id !== active.id) {
       setCanvasComponents((items) => {
         const oldIndex = items.findIndex((item) => item.id === active.id);
         const newIndex = items.findIndex((item) => item.id === over.id);
-        
         if (oldIndex === -1 || newIndex === -1) return items;
-
         return arrayMove(items, oldIndex, newIndex);
       });
+      return;
+    }
+  
+    // Dropping a new component from the palette
+    if (isDroppingNewComponent) {
+      const { type, name } = active.data.current as { type: string; name: string };
+      const newComponent: Component = {
+        id: `${type}-${Date.now()}`,
+        type,
+        name,
+      };
+      
+      const overId = over.id;
+      const overIsCanvas = overId === 'canvas-droppable';
+      const overIndex = canvasComponents.findIndex(c => c.id === overId);
+  
+      if (overIsCanvas) {
+        setCanvasComponents(items => [...items, newComponent]);
+      } else if (overIndex !== -1) {
+        setCanvasComponents(items => {
+          const newItems = [...items];
+          newItems.splice(overIndex, 0, newComponent);
+          return newItems;
+        });
+      }
     }
   }
 
@@ -205,7 +203,7 @@ export default function UiBuilderPage() {
 
         {/* Canvas Area */}
         <main className="flex-1 p-4 bg-muted/20 overflow-y-auto">
-          <div ref={setNodeRef} id="canvas-droppable" className="w-full h-full border-2 border-dashed rounded-lg flex flex-col p-4 space-y-4 bg-background">
+          <div ref={setNodeRef} id="canvas-droppable" className="w-full min-h-full border-2 border-dashed rounded-lg flex flex-col p-4 space-y-4 bg-background">
             {canvasComponents.length === 0 ? (
                <div className="flex-1 flex items-center justify-center pointer-events-none">
                 <div className="text-center text-muted-foreground">
