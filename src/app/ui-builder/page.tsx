@@ -308,45 +308,80 @@ function generateJsx(components: Component[]): string {
         }
 
         const propToString = (prop: string, value: any): string => {
+            if (prop === 'children' || prop === 'options') return '';
             if (typeof value === 'string') return `${prop}="${value}"`;
             if (typeof value === 'number') return `${prop}={${value}}`;
             if (typeof value === 'boolean') return value ? prop : `${prop}={false}`;
-            if (Array.isArray(value)) return `${prop}={${JSON.stringify(value)}}`
             return `${prop}="${value}"`;
         };
-
-        const { children, ...restProps } = props;
-        const propsString = Object.entries(restProps)
+        
+        const propsString = Object.entries(props)
             .map(([key, value]) => propToString(key, value))
+            .filter(Boolean)
             .join(' ');
-
+        
         const Comp = type.charAt(0).toUpperCase() + type.slice(1);
         
         switch (type) {
             case 'h1':
             case 'p':
-                return `<${type} ${propsString}>${children || ''}</${type}>`;
+                return `<${type} ${propsString}>${props.children || ''}</${type}>`;
             case 'input':
             case 'textarea':
             case 'slider':
-            case 'avatar':
                 return `<${Comp} ${propsString} />`;
+             case 'avatar':
+                return `<Avatar ${propsString}><AvatarImage src="${props.src}" alt="${props.alt}" /><AvatarFallback>${props.fallback}</AvatarFallback></Avatar>`;
             case 'card':
-                return `<Card ${propsString}>\n  <CardHeader>\n    <CardTitle>${props.title || ''}</CardTitle>\n  </CardHeader>\n  <CardContent>\n    <p>${props.content || ''}</p>\n  </CardContent>\n</Card>`;
+                imports.add('CardDescription');
+                return `<Card ${propsString}>\n  <CardHeader>\n    <CardTitle>${props.title || ''}</CardTitle>\n    <CardDescription>${props.description || 'Card Description'}</CardDescription>\n  </CardHeader>\n  <CardContent>\n    <p>${props.content || ''}</p>\n  </CardContent>\n</Card>`;
             case 'checkbox':
-                return `<div className="flex items-center space-x-2">\n  <Checkbox id="${component.id}" ${propsString} />\n  <Label htmlFor="${component.id}">${children}</Label>\n</div>`;
+                return `<div className="flex items-center space-x-2">\n  <Checkbox id="${component.id}" ${props.checked ? 'defaultChecked' : ''} />\n  <Label htmlFor="${component.id}">${props.children}</Label>\n</div>`;
             case 'switch':
-                 return `<div className="flex items-center space-x-2">\n  <Switch id="${component.id}" ${propsString} />\n  <Label htmlFor="${component.id}">${children}</Label>\n</div>`;
+                 return `<div className="flex items-center space-x-2">\n  <Switch id="${component.id}" ${props.checked ? 'defaultChecked' : ''} />\n  <Label htmlFor="${component.id}">${props.children}</Label>\n</div>`;
             case 'select':
-                return `<Select ${propsString}>\n  <SelectTrigger>\n    <SelectValue placeholder="${props.placeholder}" />\n  </SelectTrigger>\n  <SelectContent>\n    ${(props.options || []).map((opt:string) => `<SelectItem value="${opt.toLowerCase().replace(' ','-')}">${opt}</SelectItem>`).join('\n    ')}\n  </SelectContent>\n</Select>`
+                return `<Select>\n  <SelectTrigger>\n    <SelectValue placeholder="${props.placeholder}" />\n  </SelectTrigger>\n  <SelectContent>\n    ${(props.options || []).map((opt:string) => `<SelectItem value="${opt.toLowerCase().replace(/\\s+/g, '-')}">${opt}</SelectItem>`).join('\n    ')}\n  </SelectContent>\n</Select>`
             default:
-                 return `<${Comp} ${propsString}>${children || ''}</${Comp}>`;
+                 return `<${Comp} ${propsString}>${props.children || ''}</${Comp}>`;
         }
     }).join('\n\n');
 
-    const importString = `import { ${Array.from(imports).sort().join(', ')} } from '@/components/ui';`;
+    const getUiImports = () => {
+        const allImports = new Set<string>();
+        components.forEach(c => {
+            (componentImports[c.type] || []).forEach(imp => allImports.add(imp));
+            if(c.type === 'card') allImports.add('CardDescription');
+        });
+        if (allImports.size === 0) return '';
+        
+        const sortedImports = Array.from(allImports).sort();
+        const componentName = `{\n  ${sortedImports.join(',\n  ')}\n}`;
+        
+        let path = '';
+        if (sortedImports.includes('Button')) path = '@/components/ui/button';
+        else if (sortedImports.includes('Input')) path = '@/components/ui/input';
+        else if (sortedImports.includes('Textarea')) path = '@/components/ui/textarea';
+        else if (sortedImports.includes('Card')) path = '@/components/ui/card';
+        else if (sortedImports.includes('Checkbox')) path = '@/components/ui/checkbox';
+        else if (sortedImports.includes('Switch')) path = '@/components/ui/switch';
+        else if (sortedImports.includes('Select')) path = '@/components/ui/select';
+        else if (sortedImports.includes('Slider')) path = '@/components/ui/slider';
+        else if (sortedImports.includes('Avatar')) path = '@/components/ui/avatar';
+        else if (sortedImports.includes('Label')) path = '@/components/ui/label';
 
-    return `import React from 'react';\n${imports.size > 0 ? `${importString}\n` : ''}
+        if(allImports.size > 1) {
+          path = '@/components/ui';
+        }
+        
+        // This is a bit of a hack, we should find a better way
+        const finalImports = Array.from(allImports).sort().join(', ');
+
+        return `import { ${finalImports} } from '${path}';`;
+    }
+
+    const importString = getUiImports();
+
+    return `import React from 'react';\n${importString ? `${importString}\n` : ''}
 export default function GeneratedComponent() {
   return (
     <div className="space-y-4 p-4">
