@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription as DialogDescriptionComponent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { saveComponentToFile } from './actions';
 
@@ -445,9 +445,9 @@ function CodeGenerationDialog({ components }: { components: Component[] }) {
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>Generated JSX Code</DialogTitle>
-                    <DialogDescription>
+                    <DialogDescriptionComponent>
                         Here is the code for the layout you built. You can copy it or save it as a new component file.
-                    </DialogDescription>
+                    </DialogDescriptionComponent>
                 </DialogHeader>
                 <div className="relative">
                     <pre className="bg-muted rounded-md p-4 h-[400px] overflow-auto text-sm">
@@ -619,7 +619,7 @@ export default function UiBuilderPage() {
         </aside>
 
         {/* Canvas Area */}
-        <main className="flex-1 p-4 bg-muted/20 overflow-y-auto">
+        <main className="flex-1 p-4 bg-muted/20 overflow-y-auto" onClick={handleDeselect}>
             <Canvas onSelect={handleDeselect}>
                 {canvasComponents.length === 0 ? (
                     <div className="flex-1 flex items-center justify-center pointer-events-none h-full">
