@@ -7,37 +7,94 @@ import { Label } from "@/components/ui/label";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 const themes = [
-  { name: "Default", theme: "default" },
-  { name: "Ocean", theme: "ocean" },
-  { name: "Forest", theme: "forest" },
-  { name: "Sunset", theme: "sunset" },
+  { name: "Default", theme: "default", color: "#A020F0" },
+  { name: "Ocean", theme: "ocean", color: "#1E90FF" },
+  { name: "Forest", theme: "forest", color: "#228B22" },
+  { name: "Sunset", theme: "sunset", color: "#FF4500" },
 ];
+
+function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return null;
+
+  let r = parseInt(result[1], 16) / 255;
+  let g = parseInt(result[2], 16) / 255;
+  let b = parseInt(result[3], 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const [customColor, setCustomColor] = React.useState(localStorage.getItem('customColor') || themes[0].color);
 
-  const handleThemeChange = (newTheme: string) => {
-    const currentIsDark = document.documentElement.classList.contains('dark');
-    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    
+  const applyTheme = (color: string) => {
+    const hsl = hexToHsl(color);
+    if (hsl) {
+      const { h, s, l } = hsl;
+      document.documentElement.style.setProperty('--primary', `${h} ${s}% ${l}%`);
+      document.documentElement.style.setProperty('--primary-foreground', l > 50 ? '222.2 47.4% 11.2%' : '210 40% 98%');
+      document.documentElement.style.setProperty('--ring', `${h} ${s}% ${l}%`);
+      document.documentElement.style.setProperty('--accent', `${h} 30% 90%`);
+
+      localStorage.setItem('customColor', color);
+      setCustomColor(color);
+    }
+    // remove predefined theme classes
+    document.documentElement.classList.remove('theme-ocean', 'theme-forest', 'theme-sunset');
+  }
+
+  const handleThemeChange = (newTheme: string, color?: string) => {
+    // Remove custom theme styles
+    document.documentElement.style.removeProperty('--primary');
+    document.documentElement.style.removeProperty('--primary-foreground');
+    document.documentElement.style.removeProperty('--ring');
+    document.documentElement.style.removeProperty('--accent');
+    localStorage.removeItem('customColor');
+
     // Remove existing theme classes
-    document.documentElement.classList.remove('theme-default', 'theme-ocean', 'theme-forest', 'theme-sunset');
+    document.documentElement.classList.remove('theme-ocean', 'theme-forest', 'theme-sunset');
     
     if (newTheme !== 'default') {
       document.documentElement.classList.add(`theme-${newTheme}`);
     }
+    
+    if (color) {
+      setCustomColor(color);
+    }
 
-    // This is a bit of a workaround to persist the color theme choice
-    // separate from the light/dark mode choice.
     localStorage.setItem('colorTheme', newTheme);
     
-    // Force re-render with correct theme class
+    // This is a bit of a workaround to persist the color theme choice
+    const currentIsDark = document.documentElement.classList.contains('dark');
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
     setTheme(currentIsDark ? 'dark' : 'light');
     if (theme === 'system') {
        setTheme(systemTheme);
        setTimeout(()=> setTheme('system'), 1);
+    } else {
+        // force re-render
+        setTheme(theme === 'dark' ? 'light' : 'dark');
+        setTimeout(() => setTheme(theme || 'light'), 1);
     }
   };
 
@@ -46,12 +103,16 @@ export default function SettingsPage() {
     if (savedColorTheme !== 'default') {
       document.documentElement.classList.add(`theme-${savedColorTheme}`);
     }
+    const savedCustomColor = localStorage.getItem('customColor');
+    if (savedCustomColor) {
+      applyTheme(savedCustomColor)
+    }
   }, []);
   
   const currentColorTheme = React.useMemo(() => {
     if (typeof window === 'undefined') return 'default';
     return localStorage.getItem('colorTheme') || 'default'
-  }, [theme]);
+  }, [theme, customColor]);
 
   return (
     <div className="flex justify-center items-start pt-16 h-[calc(100vh-4.1rem)]">
@@ -72,7 +133,7 @@ export default function SettingsPage() {
               {themes.map((t) => (
                 <div key={t.theme}>
                   <button
-                    onClick={() => handleThemeChange(t.theme)}
+                    onClick={() => handleThemeChange(t.theme, t.color)}
                     className={cn(
                       "flex flex-col items-center justify-center rounded-md border-2 p-1 w-full",
                       currentColorTheme === t.theme ? "border-primary" : "border-muted"
@@ -91,6 +152,16 @@ export default function SettingsPage() {
                   </button>
                 </div>
               ))}
+            </div>
+            <div className="flex items-center gap-4 pt-4">
+                <Label htmlFor="custom-color" className="text-base">Custom Color</Label>
+                <Input
+                    id="custom-color"
+                    type="color"
+                    value={customColor}
+                    onChange={(e) => applyTheme(e.target.value)}
+                    className="w-20 h-10 p-1"
+                />
             </div>
           </div>
         </CardContent>
