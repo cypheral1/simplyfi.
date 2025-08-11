@@ -23,7 +23,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, Code, Download, Plus } from 'lucide-react';
+import { GripVertical, Trash2, Code, Download, Plus, AlertTriangle, SeparatorHorizontal, Badge as BadgeIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,6 +33,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { saveComponentToFile } from './actions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 // Component Definitions
@@ -49,6 +54,11 @@ const availableComponents = [
   { id: 'select', name: 'Select', icon: () => <div className="text-xs pointer-events-none">Select</div> },
   { id: 'slider', name: 'Slider', icon: () => <Slider defaultValue={[50]} className="w-16 pointer-events-none" /> },
   { id: 'avatar', name: 'Avatar', icon: () => <Avatar className="w-8 h-8 pointer-events-none"><AvatarFallback>AV</AvatarFallback></Avatar> },
+  { id: 'alert', name: 'Alert', icon: () => <AlertTriangle className="w-5 h-5 text-destructive" /> },
+  { id: 'badge', name: 'Badge', icon: () => <BadgeIcon className="w-5 h-5 text-primary" /> },
+  { id: 'progress', name: 'Progress', icon: () => <div className="w-16 h-2 rounded-full bg-primary/50 pointer-events-none" /> },
+  { id: 'separator', name: 'Separator', icon: () => <SeparatorHorizontal className="w-5 h-5 text-muted-foreground" /> },
+  { id: 'tabs', name: 'Tabs', icon: () => <div className="pointer-events-none border rounded-md p-1 text-xs">Tabs</div> },
 ];
 
 type Component = {
@@ -106,6 +116,35 @@ const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
         isSelected={isSelected}
     />
   ),
+  alert: (props) => (
+    <Alert variant={props.variant}>
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>{props.title}</AlertTitle>
+        <AlertDescription>{props.description}</AlertDescription>
+    </Alert>
+  ),
+  badge: (props) => <Badge variant={props.variant}>{props.children}</Badge>,
+  progress: (props) => <Progress value={props.value} />,
+  separator: (props) => <Separator />,
+  tabs: ({children, props}) => (
+    <Tabs defaultValue={props.defaultValue || "tab1"} className="w-full">
+        <TabsList>
+            {(props.tabs || ["Tab 1", "Tab 2"]).map((tab: string, index: number) => (
+                 <TabsTrigger key={index} value={`tab${index+1}`}>{tab}</TabsTrigger>
+            ))}
+        </TabsList>
+        {(props.tabs || ["Tab 1", "Tab 2"]).map((tab: string, index: number) => (
+            <TabsContent key={index} value={`tab${index+1}`}>
+                <DroppableContainer 
+                    id={`${props.id}-tab${index+1}`} 
+                    items={children?.[index]?.children || []}
+                    onSelect={() => {}}
+                    isSelected={false}
+                />
+            </TabsContent>
+        ))}
+    </Tabs>
+  ),
 };
 
 const initialProps: { [key: string]: any } = {
@@ -121,6 +160,11 @@ const initialProps: { [key: string]: any } = {
     slider: { defaultValue: 50, max: 100, step: 1 },
     avatar: { src: 'https://placehold.co/40x40.png', alt: 'User Avatar', fallback: 'AV' },
     container: { className: "space-y-4 p-4 min-h-[100px] border border-dashed rounded-lg" },
+    alert: { title: 'Heads up!', description: 'This is an important alert message.', variant: 'default' },
+    badge: { children: 'Badge', variant: 'default' },
+    progress: { value: 45 },
+    separator: {},
+    tabs: { tabs: ['Details', 'Settings'], defaultValue: 'details' },
 }
 
 function DraggableComponent({ id, name, icon }: { id: string, name: string, icon: () => React.ReactNode }) {
@@ -269,7 +313,7 @@ function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedCompone
         const key = `${selectedComponent.id}-${propName}`;
         const type = typeof propValue;
 
-        if (propName === 'variant' && selectedComponent.type === 'button') {
+        if ((propName === 'variant' && selectedComponent.type === 'button') || (propName === 'variant' && selectedComponent.type === 'badge')) {
             return (
                  <div key={key} className="space-y-2">
                     <Label htmlFor={key} className="capitalize">{propName}</Label>
@@ -280,14 +324,29 @@ function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedCompone
                             <SelectItem value="destructive">Destructive</SelectItem>
                             <SelectItem value="outline">Outline</SelectItem>
                             <SelectItem value="secondary">Secondary</SelectItem>
-                            <SelectItem value="ghost">Ghost</SelectItem>
-                            <SelectItem value="link">Link</SelectItem>
+                            {selectedComponent.type === 'button' && <SelectItem value="ghost">Ghost</SelectItem>}
+                            {selectedComponent.type === 'button' && <SelectItem value="link">Link</SelectItem>}
                         </SelectContent>
                     </Select>
                 </div>
             )
         }
         
+        if (propName === 'variant' && selectedComponent.type === 'alert') {
+            return (
+                 <div key={key} className="space-y-2">
+                    <Label htmlFor={key} className="capitalize">{propName}</Label>
+                    <Select value={propValue} onValueChange={(val) => handlePropChange(propName, val)}>
+                        <SelectTrigger id={key}><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="default">Default</SelectItem>
+                            <SelectItem value="destructive">Destructive</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            )
+        }
+
         if (type === 'boolean') {
              return (
                 <div key={key} className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
@@ -297,7 +356,7 @@ function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedCompone
             )
         }
 
-        if (propName === 'options' && Array.isArray(propValue)) {
+        if ((propName === 'options' || propName === 'tabs') && Array.isArray(propValue)) {
             return (
                  <div key={key} className="space-y-2">
                     <Label htmlFor={key} className="capitalize">{propName} (comma separated)</Label>
@@ -349,6 +408,11 @@ function generateJsx(components: Component[], level = 0): string {
         select: ['Select', 'SelectContent', 'SelectItem', 'SelectTrigger', 'SelectValue'],
         slider: ['Slider'],
         avatar: ['Avatar', 'AvatarFallback', 'AvatarImage'],
+        alert: ['Alert', 'AlertDescription', 'AlertTitle', 'AlertTriangle'],
+        badge: ['Badge'],
+        progress: ['Progress'],
+        separator: ['Separator'],
+        tabs: ['Tabs', 'TabsContent', 'TabsList', 'TabsTrigger'],
     };
 
     const componentCode = components.map(component => {
@@ -358,7 +422,7 @@ function generateJsx(components: Component[], level = 0): string {
         }
 
         const propToString = (prop: string, value: any): string => {
-            if (['children', 'options', 'title', 'content', 'description'].includes(prop)) return '';
+            if (['children', 'options', 'tabs', 'title', 'content', 'description'].includes(prop)) return '';
             if (typeof value === 'boolean') return value ? prop : `${prop}={false}`;
             if (typeof value === 'number') return `${prop}={${value}}`;
             if (typeof value === 'string') return `${prop}="${value.replace(/"/g, '\\"')}"`;
@@ -380,7 +444,14 @@ function generateJsx(components: Component[], level = 0): string {
             case 'input':
             case 'textarea':
             case 'slider':
+            case 'separator':
                 return `${indent}<${Comp} ${propsString} />`;
+            case 'progress':
+                return `${indent}<Progress ${propsString} />`;
+            case 'badge':
+                 return `${indent}<Badge ${propsString}>${props.children}</Badge>`;
+            case 'alert':
+                return `${indent}<Alert ${propsString}>\n${indent}  <AlertTriangle className="h-4 w-4" />\n${indent}  <AlertTitle>${props.title}</AlertTitle>\n${indent}  <AlertDescription>${props.description}</AlertDescription>\n${indent}</Alert>`;
             case 'avatar':
                 return `${indent}<Avatar ${propsString}><AvatarImage src="${props.src}" alt="${props.alt}" /><AvatarFallback>${props.fallback}</AvatarFallback></Avatar>`;
             case 'card':
@@ -391,6 +462,8 @@ function generateJsx(components: Component[], level = 0): string {
                  return `${indent}<div className="flex items-center space-x-2">\n${indent}  <Switch id="${component.id}" ${props.checked ? 'defaultChecked' : ''} />\n${indent}  <Label htmlFor="${component.id}">${props.children}</Label>\n${indent}</div>`;
             case 'select':
                 return `${indent}<Select>\n${indent}  <SelectTrigger>\n${indent}    <SelectValue placeholder="${props.placeholder}" />\n${indent}  </SelectTrigger>\n${indent}  <SelectContent>\n${indent}    ${(props.options || []).map((opt:string) => `<SelectItem value="${opt.toLowerCase().replace(/\s+/g, '-')}">${opt}</SelectItem>`).join(`\n${indent}    `)}\n${indent}  </SelectContent>\n${indent}</Select>`
+            case 'tabs':
+                return `${indent}<Tabs defaultValue="${props.defaultValue || (props.tabs[0] || 'tab1').toLowerCase().replace(/\s+/g, '-')}" className="w-full">\n${indent}  <TabsList>\n${indent}    ${(props.tabs || []).map((tab: string) => `<TabsTrigger value="${tab.toLowerCase().replace(/\s+/g, '-')}">${tab}</TabsTrigger>`).join(`\n${indent}    `)}\n${indent}  </TabsList>\n${indent}  ${(props.tabs || []).map((tab: string, i:number) => `<TabsContent value="${tab.toLowerCase().replace(/\s+/g, '-')}">\n${generateJsx(children?.[i]?.children || [], level + 2)}\n${indent}  </TabsContent>`).join(`\n${indent}  `)}\n${indent}</Tabs>`;
             case 'container':
                  return `${indent}<div ${propsString ? `className="${props.className}"` : ''}>\n${generateJsx(children || [], level + 1)}\n${indent}</div>`
             default:
@@ -426,6 +499,12 @@ function generateJsx(components: Component[], level = 0): string {
           else if (['Select', 'SelectContent', 'SelectItem', 'SelectTrigger', 'SelectValue'].includes(imp)) path = '@/components/ui/select';
           else if (['Slider'].includes(imp)) path = '@/components/ui/slider';
           else if (['Avatar', 'AvatarFallback', 'AvatarImage'].includes(imp)) path = '@/components/ui/avatar';
+          else if (['Alert', 'AlertDescription', 'AlertTitle'].includes(imp)) path = '@/components/ui/alert';
+          else if (['Badge'].includes(imp)) path = '@/components/ui/badge';
+          else if (['Progress'].includes(imp)) path = '@/components/ui/progress';
+          else if (['Separator'].includes(imp)) path = '@/components/ui/separator';
+          else if (['Tabs', 'TabsContent', 'TabsList', 'TabsTrigger'].includes(imp)) path = '@/components/ui/tabs';
+          else if (['AlertTriangle'].includes(imp)) path = 'lucide-react';
           else return;
 
           if (!importGroups[path]) {
@@ -558,25 +637,7 @@ export default function UiBuilderPage() {
   
   useEffect(() => {
     setIsClient(true);
-    // Expose functions to window for SortableComponent to call
-    (window as any).removeComponent = handleRemoveComponent;
-    (window as any).selectComponent = handleSelectComponent;
-    (window as any).selectedComponentId = selectedComponentId;
-    
-    return () => {
-        delete (window as any).removeComponent;
-        delete (window as any).selectComponent;
-        delete (window as any).selectedComponentId;
-    }
-  }, [selectedComponentId]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
+  }, []);
 
   const findComponent = (components: Component[], id: UniqueIdentifier | null): Component | null => {
       if (!id) return null;
@@ -601,16 +662,29 @@ export default function UiBuilderPage() {
       return null;
   }
 
-  const addComponent = (components: Component[], newComponent: Component, parentId: UniqueIdentifier | null): Component[] => {
+  const addComponent = (components: Component[], newComponent: Component, parentId: UniqueIdentifier | null, overId?: UniqueIdentifier | null): Component[] => {
       if (parentId === null) {
+          if (overId) {
+            const overIndex = components.findIndex(c => c.id === overId);
+            if (overIndex !== -1) {
+              return [...components.slice(0, overIndex), newComponent, ...components.slice(overIndex)];
+            }
+          }
           return [...components, newComponent];
       }
       return components.map(c => {
           if (c.id === parentId) {
-              return { ...c, children: [...(c.children || []), newComponent] };
+              const children = c.children || [];
+               if (overId) {
+                const overIndex = children.findIndex(child => child.id === overId);
+                 if (overIndex !== -1) {
+                    return {...c, children: [...children.slice(0, overIndex), newComponent, ...children.slice(overIndex)]};
+                }
+              }
+              return { ...c, children: [...children, newComponent] };
           }
           if (c.children) {
-              return { ...c, children: addComponent(c.children, newComponent, parentId) };
+              return { ...c, children: addComponent(c.children, newComponent, parentId, overId) };
           }
           return c;
       });
@@ -626,37 +700,58 @@ export default function UiBuilderPage() {
         return acc;
     }, [] as Component[]);
   }
-
-  const moveComponent = (components: Component[], activeId: UniqueIdentifier, overId: UniqueIdentifier): Component[] => {
-        const activeComponent = findComponent(components, activeId);
-        if (!activeComponent) return components;
-
-        const newComponents = removeComponent(components, activeId);
-        
-        const overComponent = findComponent(newComponents, overId);
-        
-        if (overComponent && overComponent.type === 'container') {
-             // Dropping into a container
-            return addComponent(newComponents, activeComponent, overId);
-        } else {
-             // Dropping next to a component
-            const overParent = findParent(newComponents, overId);
-            const overParentChildren = overParent ? overParent.children || [] : newComponents;
-            const overIndex = overParentChildren.findIndex(c => c.id === overId);
-            
-            const newParentChildren = [
-                ...overParentChildren.slice(0, overIndex + 1),
-                activeComponent,
-                ...overParentChildren.slice(overIndex + 1)
-            ];
-
-            if (overParent) {
-                return newComponents.map(c => c.id === overParent.id ? { ...c, children: newParentChildren } : c);
-            }
-            return newParentChildren;
-        }
-  };
   
+  const moveComponent = (components: Component[], activeId: UniqueIdentifier, overId: UniqueIdentifier): Component[] => {
+      const activeComponent = findComponent(components, activeId);
+      if (!activeComponent) return components;
+      
+      const overParent = findParent(components, overId);
+      const activeParent = findParent(components, activeId);
+      
+      // Remove from old position
+      let tempComponents = removeComponent(components, activeId);
+      
+      // Add to new position
+      if (overParent) { // Dropping into a container from somewhere else
+          const overIndex = overParent.children!.findIndex(c => c.id === overId);
+          return tempComponents.map(c => {
+              if (c.id === overParent.id) {
+                  const newChildren = [...(c.children || [])];
+                  newChildren.splice(overIndex, 0, activeComponent);
+                  return {...c, children: newChildren};
+              }
+              return c;
+          });
+      }
+      
+      const overIndex = tempComponents.findIndex(c => c.id === overId);
+      if (overIndex !== -1) { // Dropping at root level
+          tempComponents.splice(overIndex, 0, activeComponent);
+      }
+      return tempComponents;
+  };
+    
+  useEffect(() => {
+    // Expose functions to window for SortableComponent to call from potentially deeply nested components
+    (window as any).removeComponent = handleRemoveComponent;
+    (window as any).selectComponent = handleSelectComponent;
+    (window as any).selectedComponentId = selectedComponentId;
+    
+    return () => {
+        delete (window as any).removeComponent;
+        delete (window as any).selectComponent;
+        delete (window as any).selectedComponentId;
+    }
+  }, [selectedComponentId]);
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
   const selectedComponent = findComponent(canvasComponents, selectedComponentId);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -664,12 +759,13 @@ export default function UiBuilderPage() {
     const { data } = active;
     if (data.current?.isPaletteItem) {
         const { type, name } = data.current;
+        const newId = `${type}-${Date.now()}`;
         setActiveComponent({
-            id: `new-${type}`,
+            id: newId,
             type,
             name,
             props: initialProps[type] || {},
-            children: type === 'container' ? [] : undefined,
+            children: type === 'container' || type === 'tabs' ? [] : undefined,
         });
     } else {
         setActiveComponent(findComponent(canvasComponents, active.id));
@@ -684,26 +780,42 @@ export default function UiBuilderPage() {
     const activeId = active.id;
     const overId = over.id;
 
-    const isActiveAPaletteItem = active.data.current?.isPaletteItem;
-
     if (activeId === overId) return;
 
-    // If dragging a new item over a container
-    if (isActiveAPaletteItem && over.data.current?.acceptsChildren) {
-        setCanvasComponents(prev => {
-           const newComponent: Component = {
-                id: `${active.data.current?.type}-${Date.now()}`,
-                type: active.data.current?.type,
-                name: active.data.current?.name,
-                props: initialProps[active.data.current?.type] || {},
-                children: active.data.current?.type === 'container' ? [] : undefined
-            };
-            return addComponent(prev, newComponent, overId);
-        });
-        // We need to disable the active draggable palette item to avoid multiple additions
-        active.data.current.isPaletteItem = false;
-        active.id = `${active.data.current?.type}-${Date.now()}`;
-    }
+    setCanvasComponents(prev => {
+        const activeComponent = findComponent(prev, activeId);
+        if(!activeComponent) return prev;
+        
+        const overComponent = findComponent(prev, overId);
+
+        if (overComponent && overComponent.type === 'container' && overComponent.id !== findParent(prev, activeId)?.id) {
+             const withoutActive = removeComponent(prev, activeId);
+             return addComponent(withoutActive, activeComponent, overComponent.id);
+        }
+        
+        // This is simplified, real logic would need arrayMove and handling nested structures
+        const activeParent = findParent(prev, activeId);
+        const overParent = findParent(prev, overId);
+        
+        if (activeParent?.id === overParent?.id) {
+            if (activeParent && overParent) { // move within same container
+                return prev.map(c => {
+                    if (c.id === activeParent.id) {
+                        const activeIndex = c.children!.findIndex(child => child.id === activeId);
+                        const overIndex = c.children!.findIndex(child => child.id === overId);
+                        return {...c, children: arrayMove(c.children!, activeIndex, overIndex)};
+                    }
+                    return c;
+                });
+            } else { // move at root
+                 const activeIndex = prev.findIndex(c => c.id === activeId);
+                 const overIndex = prev.findIndex(c => c.id === overId);
+                 return arrayMove(prev, activeIndex, overIndex);
+            }
+        }
+        
+        return prev;
+    })
 
   }, []);
 
@@ -712,27 +824,37 @@ export default function UiBuilderPage() {
     
     setActiveComponent(null);
     if (!over) return;
-
+    
     const activeId = active.id;
     const overId = over.id;
 
-    // Add new component
     if (active.data.current?.isPaletteItem) {
         const newComponent: Component = {
             id: `${active.data.current.type}-${Date.now()}`,
             type: active.data.current.type,
             name: active.data.current.name,
             props: initialProps[active.data.current.type] || {},
-            children: active.data.current.type === 'container' ? [] : undefined,
+            children: active.data.current.type === 'container' || active.data.current.type === 'tabs' ? [] : undefined,
         };
-        setCanvasComponents(prev => addComponent(prev, newComponent, overId === 'canvas-droppable' ? null : overId));
+        
+        setCanvasComponents(prev => {
+            const overComponent = findComponent(prev, overId);
+            if (overComponent && (overComponent.type === 'container' || overComponent.type === 'tabs')) {
+                return addComponent(prev, newComponent, overId);
+            }
+            const parent = findParent(prev, overId);
+            return addComponent(prev, newComponent, parent ? parent.id : null, overId);
+        });
         setSelectedComponentId(newComponent.id);
         return;
     }
     
-    // Move existing component
     if (activeId !== overId) {
-        setCanvasComponents(prev => moveComponent(prev, activeId, overId));
+        setCanvasComponents((items) => {
+            const activeIndex = items.findIndex((item) => item.id === activeId);
+            const overIndex = items.findIndex((item) => item.id === overId);
+            return arrayMove(items, activeIndex, overIndex);
+        });
     }
     
   }, []);
