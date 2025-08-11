@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +33,7 @@ type Component = {
 function DraggableComponent({ id, name }: { id: string, name: string }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `palette-${id}`,
-    data: { id, name }
+    data: { id, name, isPaletteItem: true }
   });
 
   const style = {
@@ -93,18 +93,23 @@ function SortableComponent({ component, onRemove }: { component: Component, onRe
 export default function UiBuilderPage() {
   const [canvasComponents, setCanvasComponents] = useState<Component[]>([]);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const { setNodeRef } = useDroppable({
     id: 'canvas-droppable',
   });
   
-  const activeComponent = activeId ? (canvasComponents.find(c => c.id === activeId) || availableComponents.find(c => `palette-${c.id}` === activeId)) : null;
+  const activeComponentData = activeId ? (canvasComponents.find(c => c.id === activeId) || activeId.toString().startsWith('palette-') && (availableComponents.find(c => `palette-${c.id}` === activeId) || (activeId as any)?.data?.current)) : null;
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveId(null);
 
-    if (over?.id === 'canvas-droppable' && active.id.toString().startsWith('palette-')) {
+    if (over?.id === 'canvas-droppable' && active.data.current?.isPaletteItem) {
         const { id, name } = active.data.current as { id: string, name: string};
         setCanvasComponents((components) => [
             ...components,
@@ -113,10 +118,14 @@ export default function UiBuilderPage() {
         return;
     }
     
-    if (over && active.id !== over.id && !active.id.toString().startsWith('palette-')) {
+    if (over && active.id !== over.id && !active.data.current?.isPaletteItem) {
         setCanvasComponents((items) => {
             const oldIndex = items.findIndex(item => item.id === active.id);
+            // over.id might be a droppable container id, not an item id.
             const newIndex = items.findIndex(item => item.id === over.id);
+
+            if (newIndex === -1) return items;
+
             return arrayMove(items, oldIndex, newIndex);
         });
     }
@@ -124,6 +133,10 @@ export default function UiBuilderPage() {
 
   function handleRemoveComponent(id: UniqueIdentifier) {
     setCanvasComponents(components => components.filter(c => c.id !== id));
+  }
+  
+  if (!isClient) {
+    return null;
   }
 
   return (
@@ -176,10 +189,10 @@ export default function UiBuilderPage() {
         </aside>
       </div>
       <DragOverlay>
-        {activeId ? (
+        {activeId && activeComponentData ? (
             <div className="border rounded-lg p-3 text-sm cursor-grabbing bg-card shadow-lg flex items-center gap-2">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
-                {activeComponent?.name}
+                {activeComponentData?.name}
             </div>
         ) : null}
       </DragOverlay>
