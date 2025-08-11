@@ -1,13 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Label } from "@/components/ui/label";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const themes = [
   { name: "Default", theme: "default", color: "#A020F0" },
@@ -44,32 +46,33 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const [customColor, setCustomColor] = React.useState(localStorage.getItem('customColor') || themes[0].color);
+  const { toast } = useToast();
 
-  const applyTheme = (color: string) => {
-    const hsl = hexToHsl(color);
-    if (hsl) {
-      const { h, s, l } = hsl;
-      document.documentElement.style.setProperty('--primary', `${h} ${s}% ${l}%`);
-      document.documentElement.style.setProperty('--primary-foreground', l > 50 ? '222.2 47.4% 11.2%' : '210 40% 98%');
-      document.documentElement.style.setProperty('--ring', `${h} ${s}% ${l}%`);
-      document.documentElement.style.setProperty('--accent', `${h} 30% 90%`);
+  const [currentColorTheme, setCurrentColorTheme] = React.useState('default');
+  const [customColor, setCustomColor] = React.useState(themes[0].color);
 
-      localStorage.setItem('customColor', color);
-      setCustomColor(color);
+  // Load saved settings on initial render
+  React.useEffect(() => {
+    const savedColorTheme = localStorage.getItem('colorTheme') || 'default';
+    const savedCustomColor = localStorage.getItem('customColor') || themes.find(t => t.theme === savedColorTheme)?.color || themes[0].color;
+    
+    setCurrentColorTheme(savedColorTheme);
+    setCustomColor(savedCustomColor);
+    
+    if (savedColorTheme !== 'default') {
+      document.documentElement.classList.add(`theme-${savedColorTheme}`);
+    } else if(savedCustomColor) {
+      applyCustomTheme(savedCustomColor, false);
     }
-    // remove predefined theme classes
-    document.documentElement.classList.remove('theme-ocean', 'theme-forest', 'theme-sunset');
-  }
+  }, []);
 
-  const handleThemeChange = (newTheme: string, color?: string) => {
+  const applyPredefinedTheme = (newTheme: string, save = true) => {
     // Remove custom theme styles
     document.documentElement.style.removeProperty('--primary');
     document.documentElement.style.removeProperty('--primary-foreground');
     document.documentElement.style.removeProperty('--ring');
     document.documentElement.style.removeProperty('--accent');
-    localStorage.removeItem('customColor');
-
+    
     // Remove existing theme classes
     document.documentElement.classList.remove('theme-ocean', 'theme-forest', 'theme-sunset');
     
@@ -77,13 +80,7 @@ export default function SettingsPage() {
       document.documentElement.classList.add(`theme-${newTheme}`);
     }
     
-    if (color) {
-      setCustomColor(color);
-    }
-
-    localStorage.setItem('colorTheme', newTheme);
-    
-    // This is a bit of a workaround to persist the color theme choice
+    // This is a bit of a workaround to persist the color theme choice with next-themes
     const currentIsDark = document.documentElement.classList.contains('dark');
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 
@@ -96,24 +93,56 @@ export default function SettingsPage() {
         setTheme(theme === 'dark' ? 'light' : 'dark');
         setTimeout(() => setTheme(theme || 'light'), 1);
     }
-  };
 
-  React.useEffect(() => {
-    const savedColorTheme = localStorage.getItem('colorTheme') || 'default';
-    if (savedColorTheme !== 'default') {
-      document.documentElement.classList.add(`theme-${savedColorTheme}`);
+    if (save) {
+      localStorage.setItem('colorTheme', newTheme);
+      localStorage.removeItem('customColor');
     }
-    const savedCustomColor = localStorage.getItem('customColor');
-    if (savedCustomColor) {
-      applyTheme(savedCustomColor)
+  }
+
+  const applyCustomTheme = (color: string, save = true) => {
+    const hsl = hexToHsl(color);
+    if (hsl) {
+      const { h, s, l } = hsl;
+      document.documentElement.style.setProperty('--primary', `${h} ${s}% ${l}%`);
+      document.documentElement.style.setProperty('--primary-foreground', l > 50 ? '222.2 47.4% 11.2%' : '210 40% 98%');
+      document.documentElement.style.setProperty('--ring', `${h} ${s}% ${l}%`);
+      document.documentElement.style.setProperty('--accent', `${h} 30% 90%`);
+
+      // remove predefined theme classes
+      document.documentElement.classList.remove('theme-ocean', 'theme-forest', 'theme-sunset');
+      
+      if (save) {
+        localStorage.setItem('customColor', color);
+        localStorage.setItem('colorTheme', 'custom');
+      }
     }
-  }, []);
+  }
+
+  const handleSave = () => {
+    if (currentColorTheme === 'custom') {
+      applyCustomTheme(customColor);
+    } else {
+      applyPredefinedTheme(currentColorTheme);
+    }
+    toast({
+      title: "Settings Saved",
+      description: "Your new theme settings have been applied.",
+    })
+  }
   
-  const currentColorTheme = React.useMemo(() => {
-    if (typeof window === 'undefined') return 'default';
-    return localStorage.getItem('colorTheme') || 'default'
-  }, [theme, customColor]);
-
+  const handleReset = () => {
+    const savedColorTheme = localStorage.getItem('colorTheme') || 'default';
+    const savedCustomColor = localStorage.getItem('customColor') || themes.find(t => t.theme === savedColorTheme)?.color || themes[0].color;
+    setCurrentColorTheme(savedColorTheme);
+    setCustomColor(savedCustomColor);
+    if (savedColorTheme === 'custom') {
+        applyCustomTheme(savedCustomColor, false);
+    } else {
+        applyPredefinedTheme(savedColorTheme, false);
+    }
+  };
+  
   return (
     <div className="flex justify-center items-start pt-16 h-[calc(100vh-4.1rem)]">
       <Card className="w-full max-w-2xl">
@@ -133,7 +162,10 @@ export default function SettingsPage() {
               {themes.map((t) => (
                 <div key={t.theme}>
                   <button
-                    onClick={() => handleThemeChange(t.theme, t.color)}
+                    onClick={() => {
+                        setCurrentColorTheme(t.theme);
+                        setCustomColor(t.color);
+                    }}
                     className={cn(
                       "flex flex-col items-center justify-center rounded-md border-2 p-1 w-full",
                       currentColorTheme === t.theme ? "border-primary" : "border-muted"
@@ -159,12 +191,19 @@ export default function SettingsPage() {
                     id="custom-color"
                     type="color"
                     value={customColor}
-                    onChange={(e) => applyTheme(e.target.value)}
+                    onChange={(e) => {
+                        setCustomColor(e.target.value)
+                        setCurrentColorTheme('custom')
+                    }}
                     className="w-20 h-10 p-1"
                 />
             </div>
           </div>
         </CardContent>
+        <CardFooter className="flex justify-end gap-2">
+            <Button variant="outline" onClick={handleReset}>Reset</Button>
+            <Button onClick={handleSave}>Save</Button>
+        </CardFooter>
       </Card>
     </div>
   );
