@@ -384,7 +384,7 @@ function generateJsx(components: Component[], level = 0): string {
             case 'avatar':
                 return `${indent}<Avatar ${propsString}><AvatarImage src="${props.src}" alt="${props.alt}" /><AvatarFallback>${props.fallback}</AvatarFallback></Avatar>`;
             case 'card':
-                return `${indent}<Card ${propsString}>\n${indent}  <CardHeader>\n${indent}    <CardTitle>${props.title || ''}</CardTitle>\n${indent}    <CardDescription>${props.description || 'Card Description'}</CardDescription>\n${indent}  </CardHeader>\n${indent}  <CardContent>\n${indent}    <p>${props.content || ''}</p>\n${indent}</Card>`;
+                return `${indent}<Card ${propsString}>\n${indent}  <CardHeader>\n${indent}    <CardTitle>${props.title || ''}</CardTitle>\n${indent}    <CardDescription>${props.description || 'Card Description'}</CardDescription>\n${indent}  </CardHeader>\n${indent}  <CardContent>\n${indent}    <p>${props.content || ''}</p>\n${indent}  </CardContent>\n${indent}</Card>`;
             case 'checkbox':
                 return `${indent}<div className="flex items-center space-x-2">\n${indent}  <Checkbox id="${component.id}" ${props.checked ? 'defaultChecked' : ''} />\n${indent}  <Label htmlFor="${component.id}">${props.children}</Label>\n${indent}</div>`;
             case 'switch':
@@ -577,6 +577,85 @@ export default function UiBuilderPage() {
       },
     })
   );
+
+  const findComponent = (components: Component[], id: UniqueIdentifier | null): Component | null => {
+      if (!id) return null;
+      for (const component of components) {
+          if (component.id === id) return component;
+          if (component.children) {
+              const found = findComponent(component.children, id);
+              if (found) return found;
+          }
+      }
+      return null;
+  }
+  
+  const findParent = (components: Component[], id: UniqueIdentifier): Component | null => {
+      for (const component of components) {
+          if (component.children?.some(c => c.id === id)) return component;
+          if (component.children) {
+              const found = findParent(component.children, id);
+              if (found) return found;
+          }
+      }
+      return null;
+  }
+
+  const addComponent = (components: Component[], newComponent: Component, parentId: UniqueIdentifier | null): Component[] => {
+      if (parentId === null) {
+          return [...components, newComponent];
+      }
+      return components.map(c => {
+          if (c.id === parentId) {
+              return { ...c, children: [...(c.children || []), newComponent] };
+          }
+          if (c.children) {
+              return { ...c, children: addComponent(c.children, newComponent, parentId) };
+          }
+          return c;
+      });
+  }
+  
+  const removeComponent = (components: Component[], id: UniqueIdentifier): Component[] => {
+    return components.reduce((acc, comp) => {
+        if (comp.id === id) return acc;
+        if (comp.children) {
+            comp.children = removeComponent(comp.children, id);
+        }
+        acc.push(comp);
+        return acc;
+    }, [] as Component[]);
+  }
+
+  const moveComponent = (components: Component[], activeId: UniqueIdentifier, overId: UniqueIdentifier): Component[] => {
+        const activeComponent = findComponent(components, activeId);
+        if (!activeComponent) return components;
+
+        const newComponents = removeComponent(components, activeId);
+        
+        const overComponent = findComponent(newComponents, overId);
+        
+        if (overComponent && overComponent.type === 'container') {
+             // Dropping into a container
+            return addComponent(newComponents, activeComponent, overId);
+        } else {
+             // Dropping next to a component
+            const overParent = findParent(newComponents, overId);
+            const overParentChildren = overParent ? overParent.children || [] : newComponents;
+            const overIndex = overParentChildren.findIndex(c => c.id === overId);
+            
+            const newParentChildren = [
+                ...overParentChildren.slice(0, overIndex + 1),
+                activeComponent,
+                ...overParentChildren.slice(overIndex + 1)
+            ];
+
+            if (overParent) {
+                return newComponents.map(c => c.id === overParent.id ? { ...c, children: newParentChildren } : c);
+            }
+            return newParentChildren;
+        }
+  };
   
   const selectedComponent = findComponent(canvasComponents, selectedComponentId);
 
@@ -657,85 +736,6 @@ export default function UiBuilderPage() {
     }
     
   }, []);
-
-  const findComponent = (components: Component[], id: UniqueIdentifier | null): Component | null => {
-      if (!id) return null;
-      for (const component of components) {
-          if (component.id === id) return component;
-          if (component.children) {
-              const found = findComponent(component.children, id);
-              if (found) return found;
-          }
-      }
-      return null;
-  }
-  
-  const findParent = (components: Component[], id: UniqueIdentifier): Component | null => {
-      for (const component of components) {
-          if (component.children?.some(c => c.id === id)) return component;
-          if (component.children) {
-              const found = findParent(component.children, id);
-              if (found) return found;
-          }
-      }
-      return null;
-  }
-
-  const addComponent = (components: Component[], newComponent: Component, parentId: UniqueIdentifier | null): Component[] => {
-      if (parentId === null) {
-          return [...components, newComponent];
-      }
-      return components.map(c => {
-          if (c.id === parentId) {
-              return { ...c, children: [...(c.children || []), newComponent] };
-          }
-          if (c.children) {
-              return { ...c, children: addComponent(c.children, newComponent, parentId) };
-          }
-          return c;
-      });
-  }
-
-  const moveComponent = (components: Component[], activeId: UniqueIdentifier, overId: UniqueIdentifier): Component[] => {
-        const activeComponent = findComponent(components, activeId);
-        if (!activeComponent) return components;
-
-        const newComponents = removeComponent(components, activeId);
-        
-        const overComponent = findComponent(newComponents, overId);
-        
-        if (overComponent && overComponent.type === 'container') {
-             // Dropping into a container
-            return addComponent(newComponents, activeComponent, overId);
-        } else {
-             // Dropping next to a component
-            const overParent = findParent(newComponents, overId);
-            const overParentChildren = overParent ? overParent.children : newComponents;
-            const overIndex = overParentChildren.findIndex(c => c.id === overId);
-            
-            const newParentChildren = [
-                ...overParentChildren.slice(0, overIndex + 1),
-                activeComponent,
-                ...overParentChildren.slice(overIndex + 1)
-            ];
-
-            if (overParent) {
-                return newComponents.map(c => c.id === overParent.id ? { ...c, children: newParentChildren } : c);
-            }
-            return newParentChildren;
-        }
-  };
-
-  const removeComponent = (components: Component[], id: UniqueIdentifier): Component[] => {
-    return components.reduce((acc, comp) => {
-        if (comp.id === id) return acc;
-        if (comp.children) {
-            comp.children = removeComponent(comp.children, id);
-        }
-        acc.push(comp);
-        return acc;
-    }, [] as Component[]);
-  }
 
   function handleRemoveComponent(id: UniqueIdentifier) {
     if (selectedComponentId === id) {
@@ -819,5 +819,3 @@ export default function UiBuilderPage() {
     </DndContext>
   );
 }
-
-    
