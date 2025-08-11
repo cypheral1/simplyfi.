@@ -13,7 +13,7 @@ import {
   UniqueIdentifier,
   closestCenter
 } from '@dnd-kit/core';
-import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2 } from 'lucide-react';
 
@@ -103,8 +103,7 @@ export default function UiBuilderPage() {
   const [canvasComponents, setCanvasComponents] = useState<Component[]>([]);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const componentId = useId();
-
+  
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -112,31 +111,67 @@ export default function UiBuilderPage() {
   const { setNodeRef } = useDroppable({
     id: 'canvas-droppable',
   });
-  
-  const activeComponentData = activeId ? (canvasComponents.find(c => c.id === activeId) || (activeId.toString().startsWith('palette-') && availableComponents.find(c => `palette-${c.id}` === activeId))) : null;
+
+  const getActiveComponentData = () => {
+    if (!activeId) return null;
+    const canvasComp = canvasComponents.find(c => c.id === activeId);
+    if (canvasComp) return canvasComp;
+    
+    const paletteId = activeId.toString();
+    if (paletteId.startsWith('palette-')) {
+      const type = paletteId.replace('palette-', '');
+      return availableComponents.find(c => c.id === type);
+    }
+    return null;
+  }
+  const activeComponentData = getActiveComponentData();
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveId(null);
-
-    if (over?.id === 'canvas-droppable' && active.data.current?.isPaletteItem) {
-        const { id, name } = active.data.current as { id: string, name: string};
-        setCanvasComponents((components) => [
-            ...components,
-            { id: `${id}-${componentId}-${components.length}`, type: id, name },
-        ]);
-        return;
+  
+    // Not dropping on a valid target
+    if (!over) {
+      return;
     }
-    
-    if (over && active.id !== over.id && !active.data.current?.isPaletteItem) {
-        setCanvasComponents((items) => {
-            const oldIndex = items.findIndex(item => item.id === active.id);
-            const newIndex = items.findIndex(item => item.id === over.id);
+  
+    // Dropping a new component from the palette
+    if (active.data.current?.isPaletteItem) {
+      if (over.id === 'canvas-droppable' || canvasComponents.some(c => c.id === over.id)) {
+        const { id, name } = active.data.current as { id: string; name: string };
+        const newComponent: Component = {
+          id: `${id}-${Date.now()}`, // Use timestamp for more robust unique ID
+          type: id,
+          name,
+        };
+  
+        const overIndex = canvasComponents.findIndex(c => c.id === over.id);
+        
+        if (overIndex !== -1) {
+          // Insert at the position of the item it was dropped on
+          setCanvasComponents(items => [
+            ...items.slice(0, overIndex),
+            newComponent,
+            ...items.slice(overIndex)
+          ]);
+        } else {
+          // Add to the end if dropped on the canvas itself
+          setCanvasComponents(items => [...items, newComponent]);
+        }
+      }
+      return;
+    }
+  
+    // Reordering existing components on the canvas
+    if (!active.data.current?.isPaletteItem && over.id !== active.id) {
+      setCanvasComponents((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        
+        if (oldIndex === -1 || newIndex === -1) return items;
 
-            if (newIndex === -1) return items;
-
-            return arrayMove(items, oldIndex, newIndex);
-        });
+        return arrayMove(items, oldIndex, newIndex);
+      });
     }
   }
 
@@ -166,17 +201,17 @@ export default function UiBuilderPage() {
         </aside>
 
         {/* Canvas Area */}
-        <main ref={setNodeRef} className="flex-1 p-4 bg-muted/20">
-          <div className="w-full h-full border-2 border-dashed rounded-lg flex flex-col p-4 space-y-4 overflow-y-auto bg-background">
+        <main className="flex-1 p-4 bg-muted/20 overflow-y-auto">
+          <div ref={setNodeRef} id="canvas-droppable" className="w-full h-full border-2 border-dashed rounded-lg flex flex-col p-4 space-y-4 bg-background">
             {canvasComponents.length === 0 ? (
-               <div className="flex-1 flex items-center justify-center">
+               <div className="flex-1 flex items-center justify-center pointer-events-none">
                 <div className="text-center text-muted-foreground">
                     <h3 className="text-xl font-semibold">Drag components here</h3>
                     <p>Start building your UI by dragging from the left panel.</p>
                 </div>
                </div>
             ) : (
-                <SortableContext items={canvasComponents.map(c => c.id)}>
+                <SortableContext items={canvasComponents.map(c => c.id)} strategy={verticalListSortingStrategy}>
                     {canvasComponents.map(comp => (
                         <SortableComponent key={comp.id} component={comp} onRemove={handleRemoveComponent} />
                     ))}
