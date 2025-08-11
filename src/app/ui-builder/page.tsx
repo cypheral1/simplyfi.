@@ -61,7 +61,8 @@ const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
     <Card {...props}>
       <CardHeader>
         <CardTitle>{props.title || 'Card Title'}</CardTitle>
-      </CardHeader>
+        <CardDescription>{props.description || 'Card Description'}</CardHeader>
+      </CardContent>
       <CardContent>
         <p>{props.content || 'Card content goes here.'}</p>
       </CardContent>
@@ -100,7 +101,7 @@ const initialProps: { [key: string]: any } = {
     button: { children: 'Click Me', variant: 'default', size: 'default' },
     input: { placeholder: 'Enter text...', type: 'text' },
     textarea: { placeholder: 'Enter a longer text...' },
-    card: { title: 'Card Title', content: 'This is the card content.' },
+    card: { title: 'Card Title', description: 'Card Description', content: 'This is the card content.' },
     checkbox: { children: 'I agree', checked: false },
     switch: { children: 'Airplane Mode', checked: false },
     select: { placeholder: 'Select a fruit', options: ['Apple', 'Banana', 'Blueberry'] },
@@ -293,7 +294,7 @@ function generateJsx(components: Component[]): string {
         button: ['Button'],
         input: ['Input'],
         textarea: ['Textarea'],
-        card: ['Card', 'CardContent', 'CardHeader', 'CardTitle'],
+        card: ['Card', 'CardContent', 'CardHeader', 'CardTitle', 'CardDescription'],
         checkbox: ['Checkbox', 'Label'],
         switch: ['Switch', 'Label'],
         select: ['Select', 'SelectContent', 'SelectItem', 'SelectTrigger', 'SelectValue'],
@@ -308,7 +309,7 @@ function generateJsx(components: Component[]): string {
         }
 
         const propToString = (prop: string, value: any): string => {
-            if (prop === 'children' || prop === 'options') return '';
+            if (prop === 'children' || prop === 'options' || prop === 'title' || prop === 'content' || prop === 'description' ) return '';
             if (typeof value === 'string') return `${prop}="${value}"`;
             if (typeof value === 'number') return `${prop}={${value}}`;
             if (typeof value === 'boolean') return value ? prop : `${prop}={false}`;
@@ -333,7 +334,6 @@ function generateJsx(components: Component[]): string {
              case 'avatar':
                 return `<Avatar ${propsString}><AvatarImage src="${props.src}" alt="${props.alt}" /><AvatarFallback>${props.fallback}</AvatarFallback></Avatar>`;
             case 'card':
-                imports.add('CardDescription');
                 return `<Card ${propsString}>\n  <CardHeader>\n    <CardTitle>${props.title || ''}</CardTitle>\n    <CardDescription>${props.description || 'Card Description'}</CardDescription>\n  </CardHeader>\n  <CardContent>\n    <p>${props.content || ''}</p>\n  </CardContent>\n</Card>`;
             case 'checkbox':
                 return `<div className="flex items-center space-x-2">\n  <Checkbox id="${component.id}" ${props.checked ? 'defaultChecked' : ''} />\n  <Label htmlFor="${component.id}">${props.children}</Label>\n</div>`;
@@ -350,39 +350,46 @@ function generateJsx(components: Component[]): string {
         const allImports = new Set<string>();
         components.forEach(c => {
             (componentImports[c.type] || []).forEach(imp => allImports.add(imp));
-            if(c.type === 'card') allImports.add('CardDescription');
         });
         if (allImports.size === 0) return '';
         
         const sortedImports = Array.from(allImports).sort();
-        const componentName = `{\n  ${sortedImports.join(',\n  ')}\n}`;
-        
-        let path = '';
-        if (sortedImports.includes('Button')) path = '@/components/ui/button';
-        else if (sortedImports.includes('Input')) path = '@/components/ui/input';
-        else if (sortedImports.includes('Textarea')) path = '@/components/ui/textarea';
-        else if (sortedImports.includes('Card')) path = '@/components/ui/card';
-        else if (sortedImports.includes('Checkbox')) path = '@/components/ui/checkbox';
-        else if (sortedImports.includes('Switch')) path = '@/components/ui/switch';
-        else if (sortedImports.includes('Select')) path = '@/components/ui/select';
-        else if (sortedImports.includes('Slider')) path = '@/components/ui/slider';
-        else if (sortedImports.includes('Avatar')) path = '@/components/ui/avatar';
-        else if (sortedImports.includes('Label')) path = '@/components/ui/label';
-
-        if(allImports.size > 1) {
-          path = '@/components/ui';
-        }
         
         // This is a bit of a hack, we should find a better way
         const finalImports = Array.from(allImports).sort().join(', ');
+        const path = `_PATH_`; // This will be replaced
 
-        return `import { ${finalImports} } from '${path}';`;
+        const importGroups: {[key:string]: string[]} = {};
+        allImports.forEach(imp => {
+          let path: string = '';
+          if (['Button'].includes(imp)) path = '@/components/ui/button';
+          else if (['Input'].includes(imp)) path = '@/components/ui/input';
+          else if (['Textarea'].includes(imp)) path = '@/components/ui/textarea';
+          else if (['Card', 'CardContent', 'CardHeader', 'CardTitle', 'CardDescription'].includes(imp)) path = '@/components/ui/card';
+          else if (['Checkbox'].includes(imp)) path = '@/components/ui/checkbox';
+          else if (['Label'].includes(imp)) path = '@/components/ui/label';
+          else if (['Switch'].includes(imp)) path = '@/components/ui/switch';
+          else if (['Select', 'SelectContent', 'SelectItem', 'SelectTrigger', 'SelectValue'].includes(imp)) path = '@/components/ui/select';
+          else if (['Slider'].includes(imp)) path = '@/components/ui/slider';
+          else if (['Avatar', 'AvatarFallback', 'AvatarImage'].includes(imp)) path = '@/components/ui/avatar';
+          else return;
+
+          if (!importGroups[path]) {
+            importGroups[path] = [];
+          }
+          importGroups[path].push(imp);
+        });
+
+       return Object.entries(importGroups).map(([path, imps]) => {
+          return `import { ${imps.sort().join(', ')} } from '${path}';`
+        }).join('\n');
     }
 
     const importString = getUiImports();
 
-    return `import React from 'react';\n${importString ? `${importString}\n` : ''}
-export default function GeneratedComponent() {
+    return `import React from 'react';
+${importString ? `${importString}\n` : ''}
+export function MyNewComponent() {
   return (
     <div className="space-y-4 p-4">
 ${componentCode.split('\n').map(line => `      ${line}`).join('\n')}
@@ -391,12 +398,25 @@ ${componentCode.split('\n').map(line => `      ${line}`).join('\n')}
 }`;
 }
 
+
 function CodeGenerationDialog({ components }: { components: Component[] }) {
     const [open, setOpen] = useState(false);
     const [componentName, setComponentName] = useState('MyNewComponent');
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
-    const jsxCode = generateJsx(components);
+    const [jsxCode, setJsxCode] = useState('');
+
+    useEffect(() => {
+        if(open) {
+            const code = generateJsx(components).replace('MyNewComponent', componentName);
+            setJsxCode(code);
+        }
+    }, [components, open, componentName]);
+
+    useEffect(() => {
+        const code = generateJsx(components).replace('MyNewComponent', componentName);
+        setJsxCode(code);
+    }, [componentName]);
 
     const handleSave = async () => {
         if (!componentName.match(/^[A-Z][a-zA-Z0-9]*$/)) {
@@ -518,17 +538,16 @@ export default function UiBuilderPage() {
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-  
-    if (!over) {
-      return;
-    }
+
+    if (!over) return;
 
     const overId = over.id;
     const overIsCanvas = overId === 'canvas-droppable';
-    const overIsSortable = canvasComponents.some(c => c.id === overId);
+    const activeIsPaletteItem = active.data.current?.isPaletteItem;
+    const activeIsCanvasItem = canvasComponents.some(c => c.id === active.id);
 
-    // Handle dropping a new component from the palette
-    if (active.data.current?.isPaletteItem) {
+    // Dropping a new component from the palette
+    if (activeIsPaletteItem) {
       const { type, name } = active.data.current as { type: string, name: string };
       const newComponent: Component = {
         id: `${type}-${Date.now()}`,
@@ -539,28 +558,28 @@ export default function UiBuilderPage() {
 
       if (overIsCanvas) {
         setCanvasComponents(items => [...items, newComponent]);
-      } else if(overIsSortable) {
+      } else {
         const overIndex = canvasComponents.findIndex(c => c.id === overId);
         if (overIndex !== -1) {
-            setCanvasComponents(items => {
-                const newItems = [...items];
-                newItems.splice(overIndex, 0, newComponent);
-                return newItems;
-            });
+          setCanvasComponents(items => {
+            const newItems = [...items];
+            newItems.splice(overIndex, 0, newComponent);
+            return newItems;
+          });
         }
       }
       setSelectedComponentId(newComponent.id);
       return;
-    } 
-    
-    // Handle reordering an existing component
-    if (!active.data.current?.isPaletteItem && overIsSortable && active.id !== over.id) {
-        setCanvasComponents((items) => {
-            const oldIndex = items.findIndex((item) => item.id === active.id);
-            const newIndex = items.findIndex((item) => item.id === over.id);
-            if (oldIndex === -1 || newIndex === -1) return items;
-            return arrayMove(items, oldIndex, newIndex);
-        });
+    }
+
+    // Reordering an existing component on the canvas
+    if (activeIsCanvasItem && active.id !== over.id) {
+      const oldIndex = canvasComponents.findIndex(item => item.id === active.id);
+      const newIndex = canvasComponents.findIndex(item => item.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        setCanvasComponents(items => arrayMove(items, oldIndex, newIndex));
+      }
     }
   }, [canvasComponents]);
 
@@ -661,3 +680,5 @@ export default function UiBuilderPage() {
     </DndContext>
   );
 }
+
+    
