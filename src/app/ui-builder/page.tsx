@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription as CardDescriptionComponent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,23 +18,26 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  DragStartEvent,
+  DragOverEvent,
 } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, Code, Download } from 'lucide-react';
+import { GripVertical, Trash2, Code, Download, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogDescription as DialogDescriptionComponent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { saveComponentToFile } from './actions';
 
 
 // Component Definitions
 const availableComponents = [
+  { id: 'container', name: 'Container', icon: () => <div className="pointer-events-none border rounded-md p-1 text-xs border-dashed w-full h-8 flex items-center justify-center">Container</div> },
   { id: 'h1', name: 'Heading 1', icon: () => <span className="font-bold text-xl">H1</span> },
   { id: 'p', name: 'Paragraph', icon: () => <span className="text-sm">P</span> },
   { id: 'button', name: 'Button', icon: () => <Button size="sm" variant="outline" className="pointer-events-none h-auto py-1">Button</Button> },
@@ -53,6 +56,7 @@ type Component = {
   type: string;
   name: string;
   props: { [key: string]: any };
+  children?: Component[];
 };
 
 const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
@@ -61,7 +65,7 @@ const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
     <Card {...props}>
       <CardHeader>
         <CardTitle>{props.title || 'Card Title'}</CardTitle>
-        <CardDescription>{props.description || 'Card Description'}</CardDescription>
+        <CardDescriptionComponent>{props.description || 'Card Description'}</CardDescriptionComponent>
       </CardHeader>
       <CardContent>
         <p>{props.content || 'Card content goes here.'}</p>
@@ -93,6 +97,15 @@ const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
       <AvatarFallback>{props.fallback || 'CN'}</AvatarFallback>
     </Avatar>
   ),
+  container: ({ children, onSelect, isOver, isSelected, id }) => (
+    <DroppableContainer
+        id={id}
+        items={children || []}
+        onSelect={onSelect}
+        isOver={isOver}
+        isSelected={isSelected}
+    />
+  ),
 };
 
 const initialProps: { [key: string]: any } = {
@@ -107,6 +120,7 @@ const initialProps: { [key: string]: any } = {
     select: { placeholder: 'Select a fruit', options: ['Apple', 'Banana', 'Blueberry'] },
     slider: { defaultValue: 50, max: 100, step: 1 },
     avatar: { src: 'https://placehold.co/40x40.png', alt: 'User Avatar', fallback: 'AV' },
+    container: { className: "space-y-4 p-4 min-h-[100px] border border-dashed rounded-lg" },
 }
 
 function DraggableComponent({ id, name, icon }: { id: string, name: string, icon: () => React.ReactNode }) {
@@ -132,7 +146,7 @@ function DraggableComponent({ id, name, icon }: { id: string, name: string, icon
   );
 }
 
-function SortableComponent({ component, onRemove, onSelect, isSelected }: { component: Component, onRemove: (id: UniqueIdentifier) => void, onSelect: (id: UniqueIdentifier) => void, isSelected: boolean }) {
+function SortableComponent({ component, onRemove, onSelect, isSelected, parentId }: { component: Component, onRemove: (id: UniqueIdentifier, parentId: UniqueIdentifier | null) => void, onSelect: (id: UniqueIdentifier) => void, isSelected: boolean, parentId: UniqueIdentifier | null }) {
   const {
     attributes,
     listeners,
@@ -140,7 +154,7 @@ function SortableComponent({ component, onRemove, onSelect, isSelected }: { comp
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: component.id });
+  } = useSortable({ id: component.id, data: { parentId } });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -150,51 +164,86 @@ function SortableComponent({ component, onRemove, onSelect, isSelected }: { comp
 
   const ComponentToRender = componentMap[component.type];
 
+  const handleSelect = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelect(component.id);
+  }
+
+  const handleRemove = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onRemove(component.id, parentId);
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect(component.id)
-      }}
+      onClick={handleSelect}
       className={cn(
-          "p-4 bg-transparent rounded-lg relative group border-2",
+          "p-2 bg-transparent rounded-lg relative group border-2",
           isSelected ? "border-primary" : "border-transparent hover:border-dashed hover:border-muted-foreground/50"
       )}
     >
        <div {...attributes} {...listeners} className="cursor-grab p-2 absolute top-1 left-1 z-10 opacity-20 group-hover:opacity-100 transition-opacity bg-background rounded-md">
           <GripVertical className="h-5 w-5 text-muted-foreground" />
        </div>
-       <Button variant="ghost" size="icon" className="h-7 w-7 absolute top-1 right-1 z-10 opacity-20 group-hover:opacity-100 transition-opacity bg-background rounded-md" onClick={(e) => {
-           e.stopPropagation();
-           onRemove(component.id);
-       }}>
+       <Button variant="ghost" size="icon" className="h-7 w-7 absolute top-1 right-1 z-10 opacity-20 group-hover:opacity-100 transition-opacity bg-background rounded-md" onClick={handleRemove}>
         <Trash2 className="h-4 w-4 text-destructive" />
       </Button>
       <div className="pointer-events-none">
-        {ComponentToRender ? ComponentToRender(component.props) : <p>Unknown Component</p>}
+        {ComponentToRender ? ComponentToRender({
+            ...component.props, 
+            children: component.children,
+            id: component.id,
+            onSelect: handleSelect, // for container
+            isSelected
+        }) : <p>Unknown Component</p>}
       </div>
     </div>
   );
 }
 
-function Canvas({ children, onSelect }: { children: React.ReactNode, onSelect: () => void }) {
-    const { setNodeRef, isOver } = useDroppable({
-        id: 'canvas-droppable',
+function DroppableContainer({ id, items, onSelect, isSelected, isOver } : {id: UniqueIdentifier, items: Component[], onSelect: (e?: React.MouseEvent) => void, isSelected: boolean, isOver?: boolean}) {
+    const { setNodeRef } = useDroppable({
+        id
     });
 
+    const handleClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onSelect();
+    }
+    
     return (
+      <SortableContext items={items.map(c => c.id)} strategy={verticalListSortingStrategy}>
         <div 
           ref={setNodeRef} 
+          onClick={handleClick}
           className={cn(
-            "w-full min-h-full border-2 border-dashed rounded-lg p-4 space-y-4 bg-background transition-colors",
-            isOver ? "border-primary bg-primary/10" : "border-border"
-            )}
-          onClick={onSelect}
+            "w-full min-h-full rounded-lg p-4 space-y-4 bg-background transition-colors",
+            isOver ? "border-primary bg-primary/10 border-2 border-dashed" : (isSelected ? "border-primary border-2" : "border-border border-2 border-dashed"),
+          )}
         >
-            {children}
+            {items.length > 0 ? (
+                items.map(comp => (
+                    <SortableComponent 
+                        key={comp.id} 
+                        component={comp} 
+                        onRemove={(childId, parentId) => (window as any).removeComponent(childId, parentId)} 
+                        onSelect={(childId) => (window as any).selectComponent(childId)}
+                        isSelected={ (window as any).selectedComponentId === comp.id}
+                        parentId={id}
+                    />
+                ))
+            ) : (
+                 <div className="flex-1 flex items-center justify-center pointer-events-none h-full min-h-[50px]">
+                    <div className="text-center text-muted-foreground">
+                        <Plus className="mx-auto h-6 w-6" />
+                        <p className="text-xs">Drag components here</p>
+                    </div>
+                </div>
+            )}
         </div>
+      </SortableContext>
     )
 }
 
@@ -257,7 +306,7 @@ function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedCompone
             )
         }
         
-        if (type === 'string' && propValue.length > 30) {
+        if (type === 'string' && propValue.length > 30 || propName === 'className') {
             return (
                 <div key={key} className="space-y-2">
                     <Label htmlFor={key} className="capitalize">{propName}</Label>
@@ -278,7 +327,7 @@ function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedCompone
         <Card className="sticky top-4">
             <CardHeader>
                 <CardTitle>{selectedComponent.name}</CardTitle>
-                <CardDescription>Type: {selectedComponent.type}</CardDescription>
+                <CardDescriptionComponent>Type: {selectedComponent.type}</CardDescriptionComponent>
             </CardHeader>
             <CardContent className="space-y-4">
                 {Object.entries(selectedComponent.props).map(([propName, propValue]) => renderPropEditor(propName, propValue))}
@@ -287,10 +336,10 @@ function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedCompone
     )
 }
 
-function generateJsx(components: Component[]): string {
+function generateJsx(components: Component[], level = 0): string {
     const imports = new Set<string>();
     const componentImports: {[key: string]: string[]} = {
-        h1: [], p: [],
+        h1: [], p: [], container: [],
         button: ['Button'],
         input: ['Input'],
         textarea: ['Textarea'],
@@ -303,17 +352,17 @@ function generateJsx(components: Component[]): string {
     };
 
     const componentCode = components.map(component => {
-        const { type, props } = component;
+        const { type, props, children } = component;
         if (componentImports[type]) {
             componentImports[type].forEach(imp => imports.add(imp));
         }
 
         const propToString = (prop: string, value: any): string => {
-            if (prop === 'children' || prop === 'options' || prop === 'title' || prop === 'content' || prop === 'description' ) return '';
-            if (typeof value === 'string') return `${prop}="${value}"`;
-            if (typeof value === 'number') return `${prop}={${value}}`;
+            if (['children', 'options', 'title', 'content', 'description'].includes(prop)) return '';
             if (typeof value === 'boolean') return value ? prop : `${prop}={false}`;
-            return `${prop}="${value}"`;
+            if (typeof value === 'number') return `${prop}={${value}}`;
+            if (typeof value === 'string') return `${prop}="${value.replace(/"/g, '\\"')}"`;
+            return ''; // ignore other prop types like objects/arrays for now
         };
         
         const propsString = Object.entries(props)
@@ -322,43 +371,48 @@ function generateJsx(components: Component[]): string {
             .join(' ');
         
         const Comp = type.charAt(0).toUpperCase() + type.slice(1);
+        const indent = ' '.repeat((level + 2) * 2);
         
         switch (type) {
             case 'h1':
             case 'p':
-                return `<${type} ${propsString}>${props.children || ''}</${type}>`;
+                return `${indent}<${type} ${propsString}>${props.children || ''}</${type}>`;
             case 'input':
             case 'textarea':
             case 'slider':
-                return `<${Comp} ${propsString} />`;
-             case 'avatar':
-                return `<Avatar ${propsString}><AvatarImage src="${props.src}" alt="${props.alt}" /><AvatarFallback>${props.fallback}</AvatarFallback></Avatar>`;
+                return `${indent}<${Comp} ${propsString} />`;
+            case 'avatar':
+                return `${indent}<Avatar ${propsString}><AvatarImage src="${props.src}" alt="${props.alt}" /><AvatarFallback>${props.fallback}</AvatarFallback></Avatar>`;
             case 'card':
-                return `<Card ${propsString}>\n  <CardHeader>\n    <CardTitle>${props.title || ''}</CardTitle>\n    <CardDescription>${props.description || 'Card Description'}</CardDescription>\n  </CardHeader>\n  <CardContent>\n    <p>${props.content || ''}</p>\n  </CardContent>\n</Card>`;
+                return `${indent}<Card ${propsString}>\n${indent}  <CardHeader>\n${indent}    <CardTitle>${props.title || ''}</CardTitle>\n${indent}    <CardDescription>${props.description || 'Card Description'}</CardDescription>\n${indent}  </CardHeader>\n${indent}  <CardContent>\n${indent}    <p>${props.content || ''}</p>\n${indent}</Card>`;
             case 'checkbox':
-                return `<div className="flex items-center space-x-2">\n  <Checkbox id="${component.id}" ${props.checked ? 'defaultChecked' : ''} />\n  <Label htmlFor="${component.id}">${props.children}</Label>\n</div>`;
+                return `${indent}<div className="flex items-center space-x-2">\n${indent}  <Checkbox id="${component.id}" ${props.checked ? 'defaultChecked' : ''} />\n${indent}  <Label htmlFor="${component.id}">${props.children}</Label>\n${indent}</div>`;
             case 'switch':
-                 return `<div className="flex items-center space-x-2">\n  <Switch id="${component.id}" ${props.checked ? 'defaultChecked' : ''} />\n  <Label htmlFor="${component.id}">${props.children}</Label>\n</div>`;
+                 return `${indent}<div className="flex items-center space-x-2">\n${indent}  <Switch id="${component.id}" ${props.checked ? 'defaultChecked' : ''} />\n${indent}  <Label htmlFor="${component.id}">${props.children}</Label>\n${indent}</div>`;
             case 'select':
-                return `<Select>\n  <SelectTrigger>\n    <SelectValue placeholder="${props.placeholder}" />\n  </SelectTrigger>\n  <SelectContent>\n    ${(props.options || []).map((opt:string) => `<SelectItem value="${opt.toLowerCase().replace(/\\s+/g, '-')}">${opt}</SelectItem>`).join('\n    ')}\n  </SelectContent>\n</Select>`
+                return `${indent}<Select>\n${indent}  <SelectTrigger>\n${indent}    <SelectValue placeholder="${props.placeholder}" />\n${indent}  </SelectTrigger>\n${indent}  <SelectContent>\n${indent}    ${(props.options || []).map((opt:string) => `<SelectItem value="${opt.toLowerCase().replace(/\s+/g, '-')}">${opt}</SelectItem>`).join(`\n${indent}    `)}\n${indent}  </SelectContent>\n${indent}</Select>`
+            case 'container':
+                 return `${indent}<div ${propsString ? `className="${props.className}"` : ''}>\n${generateJsx(children || [], level + 1)}\n${indent}</div>`
             default:
-                 return `<${Comp} ${propsString}>${props.children || ''}</${Comp}>`;
+                 return `${indent}<${Comp} ${propsString}>${props.children || ''}</${Comp}>`;
         }
     }).join('\n\n');
 
-    const getUiImports = () => {
-        const allImports = new Set<string>();
-        components.forEach(c => {
+    if (level > 0) return componentCode;
+
+    // Root level only: generate imports
+    const allImports = new Set<string>();
+    const collectImports = (comps: Component[]) => {
+        comps.forEach(c => {
             (componentImports[c.type] || []).forEach(imp => allImports.add(imp));
+            if (c.children) collectImports(c.children);
         });
+    }
+    collectImports(components);
+    
+    const getUiImports = () => {
         if (allImports.size === 0) return '';
         
-        const sortedImports = Array.from(allImports).sort();
-        
-        // This is a bit of a hack, we should find a better way
-        const finalImports = Array.from(allImports).sort().join(', ');
-        const path = `_PATH_`; // This will be replaced
-
         const importGroups: {[key:string]: string[]} = {};
         allImports.forEach(imp => {
           let path: string = '';
@@ -377,7 +431,9 @@ function generateJsx(components: Component[]): string {
           if (!importGroups[path]) {
             importGroups[path] = [];
           }
-          importGroups[path].push(imp);
+          if(!importGroups[path].includes(imp)) {
+            importGroups[path].push(imp);
+          }
         });
 
        return Object.entries(importGroups).map(([path, imps]) => {
@@ -391,8 +447,8 @@ function generateJsx(components: Component[]): string {
 ${importString ? `${importString}\n` : ''}
 export function MyNewComponent() {
   return (
-    <div className="space-y-4 p-4">
-${componentCode.split('\n').map(line => `      ${line}`).join('\n')}
+    <div>
+${componentCode}
     </div>
   );
 }`;
@@ -408,15 +464,10 @@ function CodeGenerationDialog({ components }: { components: Component[] }) {
 
     useEffect(() => {
         if(open) {
-            const code = generateJsx(components).replace('MyNewComponent', componentName);
+            const code = generateJsx(components).replace(/MyNewComponent/g, componentName);
             setJsxCode(code);
         }
     }, [components, open, componentName]);
-
-    useEffect(() => {
-        const code = generateJsx(components).replace('MyNewComponent', componentName);
-        setJsxCode(code);
-    }, [componentName]);
 
     const handleSave = async () => {
         if (!componentName.match(/^[A-Z][a-zA-Z0-9]*$/)) {
@@ -465,9 +516,9 @@ function CodeGenerationDialog({ components }: { components: Component[] }) {
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>Generated JSX Code</DialogTitle>
-                    <DialogDescriptionComponent>
+                    <DialogDescription>
                         Here is the code for the layout you built. You can copy it or save it as a new component file.
-                    </DialogDescriptionComponent>
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="relative">
                     <pre className="bg-muted rounded-md p-4 h-[400px] overflow-auto text-sm">
@@ -501,13 +552,23 @@ function CodeGenerationDialog({ components }: { components: Component[] }) {
 
 export default function UiBuilderPage() {
   const [canvasComponents, setCanvasComponents] = useState<Component[]>([]);
-  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+  const [activeComponent, setActiveComponent] = useState<Component | null>(null);
   const [selectedComponentId, setSelectedComponentId] = useState<UniqueIdentifier | null>(null);
   const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    // Expose functions to window for SortableComponent to call
+    (window as any).removeComponent = handleRemoveComponent;
+    (window as any).selectComponent = handleSelectComponent;
+    (window as any).selectedComponentId = selectedComponentId;
+    
+    return () => {
+        delete (window as any).removeComponent;
+        delete (window as any).selectComponent;
+        delete (window as any).selectedComponentId;
+    }
+  }, [selectedComponentId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -517,95 +578,194 @@ export default function UiBuilderPage() {
     })
   );
   
-  const getActiveComponentData = () => {
-    if (!activeId) return null;
-    const canvasComp = canvasComponents.find(c => c.id === activeId);
-    if (canvasComp) return { ...canvasComp, isPaletteItem: false };
-    
-    const paletteId = activeId.toString();
-    if (paletteId.startsWith('palette-')) {
-      const type = paletteId.replace('palette-', '');
-      const item = availableComponents.find(c => c.id === type);
-      if (item) {
-        return { id: item.id, name: item.name, type: item.id, isPaletteItem: true, icon: item.icon };
-      }
-    }
-    return null;
-  }
-  const activeComponentData = getActiveComponentData();
-  const selectedComponent = canvasComponents.find(c => c.id === selectedComponentId) || null;
+  const selectedComponent = findComponent(canvasComponents, selectedComponentId);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-
-    if (!over) return;
-
-    const overId = over.id;
-    const overIsCanvas = overId === 'canvas-droppable';
-    const activeIsPaletteItem = active.data.current?.isPaletteItem;
-    const activeIsCanvasItem = canvasComponents.some(c => c.id === active.id);
-
-    // Dropping a new component from the palette
-    if (activeIsPaletteItem) {
-      const { type, name } = active.data.current as { type: string, name: string };
-      const newComponent: Component = {
-        id: `${type}-${Date.now()}`,
-        type,
-        name,
-        props: initialProps[type] || {},
-      };
-
-      if (overIsCanvas) {
-        setCanvasComponents(items => [...items, newComponent]);
-      } else {
-        const overIndex = canvasComponents.findIndex(c => c.id === overId);
-        if (overIndex !== -1) {
-          setCanvasComponents(items => {
-            const newItems = [...items];
-            newItems.splice(overIndex, 0, newComponent);
-            return newItems;
-          });
-        }
-      }
-      setSelectedComponentId(newComponent.id);
-      return;
-    }
-
-    // Reordering an existing component on the canvas
-    if (activeIsCanvasItem && active.id !== over.id) {
-      const oldIndex = canvasComponents.findIndex(item => item.id === active.id);
-      const newIndex = canvasComponents.findIndex(item => item.id === over.id);
-
-      if (oldIndex !== -1 && newIndex !== -1) {
-        setCanvasComponents(items => arrayMove(items, oldIndex, newIndex));
-      }
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const { active } = event;
+    const { data } = active;
+    if (data.current?.isPaletteItem) {
+        const { type, name } = data.current;
+        setActiveComponent({
+            id: `new-${type}`,
+            type,
+            name,
+            props: initialProps[type] || {},
+            children: type === 'container' ? [] : undefined,
+        });
+    } else {
+        setActiveComponent(findComponent(canvasComponents, active.id));
     }
   }, [canvasComponents]);
 
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    
+    const activeId = active.id;
+    const overId = over.id;
+
+    const isActiveAPaletteItem = active.data.current?.isPaletteItem;
+
+    if (activeId === overId) return;
+
+    // If dragging a new item over a container
+    if (isActiveAPaletteItem && over.data.current?.acceptsChildren) {
+        setCanvasComponents(prev => {
+           const newComponent: Component = {
+                id: `${active.data.current?.type}-${Date.now()}`,
+                type: active.data.current?.type,
+                name: active.data.current?.name,
+                props: initialProps[active.data.current?.type] || {},
+                children: active.data.current?.type === 'container' ? [] : undefined
+            };
+            return addComponent(prev, newComponent, overId);
+        });
+        // We need to disable the active draggable palette item to avoid multiple additions
+        active.data.current.isPaletteItem = false;
+        active.id = `${active.data.current?.type}-${Date.now()}`;
+    }
+
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    setActiveComponent(null);
+    if (!over) return;
+
+    const activeId = active.id;
+    const overId = over.id;
+
+    // Add new component
+    if (active.data.current?.isPaletteItem) {
+        const newComponent: Component = {
+            id: `${active.data.current.type}-${Date.now()}`,
+            type: active.data.current.type,
+            name: active.data.current.name,
+            props: initialProps[active.data.current.type] || {},
+            children: active.data.current.type === 'container' ? [] : undefined,
+        };
+        setCanvasComponents(prev => addComponent(prev, newComponent, overId === 'canvas-droppable' ? null : overId));
+        setSelectedComponentId(newComponent.id);
+        return;
+    }
+    
+    // Move existing component
+    if (activeId !== overId) {
+        setCanvasComponents(prev => moveComponent(prev, activeId, overId));
+    }
+    
+  }, []);
+
+  const findComponent = (components: Component[], id: UniqueIdentifier | null): Component | null => {
+      if (!id) return null;
+      for (const component of components) {
+          if (component.id === id) return component;
+          if (component.children) {
+              const found = findComponent(component.children, id);
+              if (found) return found;
+          }
+      }
+      return null;
+  }
+  
+  const findParent = (components: Component[], id: UniqueIdentifier): Component | null => {
+      for (const component of components) {
+          if (component.children?.some(c => c.id === id)) return component;
+          if (component.children) {
+              const found = findParent(component.children, id);
+              if (found) return found;
+          }
+      }
+      return null;
+  }
+
+  const addComponent = (components: Component[], newComponent: Component, parentId: UniqueIdentifier | null): Component[] => {
+      if (parentId === null) {
+          return [...components, newComponent];
+      }
+      return components.map(c => {
+          if (c.id === parentId) {
+              return { ...c, children: [...(c.children || []), newComponent] };
+          }
+          if (c.children) {
+              return { ...c, children: addComponent(c.children, newComponent, parentId) };
+          }
+          return c;
+      });
+  }
+
+  const moveComponent = (components: Component[], activeId: UniqueIdentifier, overId: UniqueIdentifier): Component[] => {
+        const activeComponent = findComponent(components, activeId);
+        if (!activeComponent) return components;
+
+        const newComponents = removeComponent(components, activeId);
+        
+        const overComponent = findComponent(newComponents, overId);
+        
+        if (overComponent && overComponent.type === 'container') {
+             // Dropping into a container
+            return addComponent(newComponents, activeComponent, overId);
+        } else {
+             // Dropping next to a component
+            const overParent = findParent(newComponents, overId);
+            const overParentChildren = overParent ? overParent.children : newComponents;
+            const overIndex = overParentChildren.findIndex(c => c.id === overId);
+            
+            const newParentChildren = [
+                ...overParentChildren.slice(0, overIndex + 1),
+                activeComponent,
+                ...overParentChildren.slice(overIndex + 1)
+            ];
+
+            if (overParent) {
+                return newComponents.map(c => c.id === overParent.id ? { ...c, children: newParentChildren } : c);
+            }
+            return newParentChildren;
+        }
+  };
+
+  const removeComponent = (components: Component[], id: UniqueIdentifier): Component[] => {
+    return components.reduce((acc, comp) => {
+        if (comp.id === id) return acc;
+        if (comp.children) {
+            comp.children = removeComponent(comp.children, id);
+        }
+        acc.push(comp);
+        return acc;
+    }, [] as Component[]);
+  }
 
   function handleRemoveComponent(id: UniqueIdentifier) {
     if (selectedComponentId === id) {
         setSelectedComponentId(null);
     }
-    setCanvasComponents(components => components.filter(c => c.id !== id));
+    setCanvasComponents(prev => removeComponent(prev, id));
   }
 
   function handleSelectComponent(id: UniqueIdentifier) {
     setSelectedComponentId(id);
   }
   
-  function handleDeselect() {
+  function handleDeselect(e?: React.MouseEvent) {
+      if(e) e.stopPropagation();
       setSelectedComponentId(null);
   }
 
   function handlePropsChange(id: UniqueIdentifier, newProps: any) {
-    setCanvasComponents(components => components.map(c => {
-        if (c.id === id) {
-            return { ...c, props: newProps };
-        }
-        return c;
-    }));
+    const update = (components: Component[]): Component[] => {
+        return components.map(c => {
+            if (c.id === id) {
+                return { ...c, props: newProps };
+            }
+            if (c.children) {
+                return { ...c, children: update(c.children) };
+            }
+            return c;
+        });
+    }
+    setCanvasComponents(update);
   }
   
   if (!isClient) {
@@ -619,8 +779,9 @@ export default function UiBuilderPage() {
   return (
     <DndContext 
       sensors={sensors}
-      onDragStart={(event) => setActiveId(event.active.id)}
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
       collisionDetection={closestCenter}
     >
       <div className="flex h-[calc(100vh-4.1rem)] bg-background text-foreground">
@@ -639,28 +800,7 @@ export default function UiBuilderPage() {
 
         {/* Canvas Area */}
         <main className="flex-1 p-4 bg-muted/20 overflow-y-auto" onClick={handleDeselect}>
-            <Canvas onSelect={handleDeselect}>
-                {canvasComponents.length === 0 ? (
-                    <div className="flex-1 flex items-center justify-center pointer-events-none h-full">
-                        <div className="text-center text-muted-foreground">
-                            <h3 className="text-xl font-semibold">Drag components here</h3>
-                            <p>Start building your UI by dragging from the left panel.</p>
-                        </div>
-                    </div>
-                ) : (
-                    <SortableContext items={canvasComponents.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                        {canvasComponents.map(comp => (
-                            <SortableComponent 
-                                key={comp.id} 
-                                component={comp} 
-                                onRemove={handleRemoveComponent} 
-                                onSelect={handleSelectComponent}
-                                isSelected={comp.id === selectedComponentId}
-                            />
-                        ))}
-                    </SortableContext>
-                )}
-            </Canvas>
+            <DroppableContainer id="canvas-droppable" items={canvasComponents} onSelect={handleDeselect} isSelected={selectedComponentId === 'canvas-droppable'}/>
         </main>
 
         {/* Properties Panel */}
@@ -669,14 +809,15 @@ export default function UiBuilderPage() {
         </aside>
       </div>
       <DragOverlay>
-        {activeComponentData ? (
+        {activeComponent ? (
             <div className="border rounded-lg p-3 text-sm cursor-grabbing bg-card shadow-lg flex items-center gap-3">
                 <GripVertical className="h-5 w-5 text-muted-foreground" />
-                {activeComponentData.icon && activeComponentData.icon()}
-                <span className="font-medium">{activeComponentData.name}</span>
+                <span className="font-medium">{activeComponent.name}</span>
             </div>
         ) : null}
       </DragOverlay>
     </DndContext>
   );
 }
+
+    
