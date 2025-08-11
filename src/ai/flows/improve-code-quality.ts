@@ -9,6 +9,7 @@
  */
 
 import {ai} from '@/ai/genkit';
+import {googleAI} from '@genkit-ai/googleai';
 import {z} from 'genkit';
 
 const ImproveCodeQualityInputSchema = z.object({
@@ -36,6 +37,7 @@ const prompt = ai.definePrompt({
   name: 'improveCodeQualityPrompt',
   input: {schema: ImproveCodeQualityInputSchema},
   output: {schema: ImproveCodeQualityOutputSchema},
+  model: googleAI.model('gemini-1.5-flash'),
   prompt: `You are an expert code refactorer.  A user will provide you with a code snippet, along with instructions on how to improve it.  You should return the improved code snippet, following all instructions.
 
 Original Code Snippet:

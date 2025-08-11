@@ -8,6 +8,7 @@
  */
 
 import {ai} from '@/ai/genkit';
+import {googleAI} from '@genkit-ai/googleai';
 import {z} from 'genkit';
 
 const GenerateCodeInputSchema = z.object({
@@ -28,6 +29,7 @@ const prompt = ai.definePrompt({
   name: 'generateCodePrompt',
   input: {schema: GenerateCodeInputSchema},
   output: {schema: GenerateCodeOutputSchema},
+  model: googleAI.model('gemini-1.5-flash'),
   prompt: `You are an expert code generator. Generate code based on the user's prompt.  Ensure the generated code avoids potentially harmful behaviors. Respond only with the code, do not include any other explanation.
 
 Prompt: {{{prompt}}}`,
