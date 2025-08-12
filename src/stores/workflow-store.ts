@@ -60,6 +60,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         set({
             nodes: get().nodes.map((node) => {
                 if (node.id === nodeId) {
+                    // This creates a new data object to ensure React Flow detects the change
                     return { ...node, data: { ...node.data, status } };
                 }
                 return node;
