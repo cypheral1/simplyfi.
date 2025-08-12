@@ -179,7 +179,7 @@ const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
     </Card>
   ),
   input: ({ isSelected, ...props }) => <Input {...props} placeholder={props.placeholder || 'Input field'} />,
-  h1: ({ isSelected, ...props }) => <h1 {...props} className="text-4xl font-bold tracking-tight">{props.children || 'Heading 1'}</h1>,
+  h1: ({ isSelected, ...props }) => <h1 {...props} className={cn("text-4xl font-bold tracking-tight", props.className)}>{props.children || 'Heading 1'}</h1>,
   p: ({ isSelected, ...props }) => <p {...props}>{props.children || 'This is a paragraph of text.'}</p>,
   textarea: ({ isSelected, ...props }) => <Textarea {...props} placeholder={props.placeholder || 'Text area'} />,
   checkbox: ({ isSelected, ...props }) => <div className="flex items-center space-x-2"><Checkbox id={props.id || 'checkbox'} checked={props.checked} /><Label htmlFor={props.id || 'checkbox'}>{props.children || 'Accept terms'}</Label></div>,
@@ -463,7 +463,7 @@ function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedCompone
             )
         }
         
-        if (type === 'string' && propValue.length > 30 || propName === 'className' || propName === 'src') {
+        if (type === 'string' && propValue.length > 30 || propName === 'className' || propName === 'src' || propName === 'children' || propName === 'title' || propName === 'description' || propName === 'content' || propName === 'placeholder' || propName === 'fallback') {
             return (
                 <div key={key} className="space-y-2">
                     <Label htmlFor={key} className="capitalize">{propName}</Label>
