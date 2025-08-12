@@ -1,4 +1,4 @@
-import { CodeXml, LayoutTemplate, Settings, Workflow } from 'lucide-react';
+import { CodeXml, LayoutTemplate, Settings, Workflow, Bot } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import Link from 'next/link';
 import { Button } from './ui/button';
@@ -11,7 +11,7 @@ export default function Header() {
           <Link href="/" className="flex items-center gap-2">
             <CodeXml className="h-7 w-7 text-primary" />
             <h1 className="text-xl font-bold tracking-tight text-foreground font-headline">
-              Vibe Coder
+              VibeCode
             </h1>
           </Link>
           <nav className="flex items-center gap-4">
@@ -21,7 +21,11 @@ export default function Header() {
             </Link>
             <Link href="/agent-builder" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
               <Workflow className="h-5 w-5" />
-              <span>Agent Builder</span>
+              <span>AI Workflows</span>
+            </Link>
+             <Link href="#" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+              <Bot className="h-5 w-5" />
+              <span>CLI Generator</span>
             </Link>
           </nav>
         </div>

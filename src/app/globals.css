@@ -130,3 +130,17 @@ body {
     --ring: 30 90% 65%;
   }
 }
+
+@layer utilities {
+  .bg-dotted-pattern {
+    background-color: hsl(var(--background));
+    background-image: radial-gradient(hsl(var(--foreground) / 0.1) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  .dark .bg-dotted-pattern {
+    background-color: hsl(var(--background));
+    background-image: radial-gradient(hsl(var(--foreground) / 0.1) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+}
