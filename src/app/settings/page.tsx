@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -24,6 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
 
 const themes = [
   { name: "Default", theme: "default", color: "#A020F0" },
@@ -174,58 +176,68 @@ export default function SettingsPage() {
           <CardDescription>Manage your application settings.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="theme-toggle" className="text-base">Dark/Light Mode</Label>
-            <ThemeToggle />
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium">Appearance</h3>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="theme-toggle">Dark/Light Mode</Label>
+              <ThemeToggle />
+            </div>
+            
+            <div className="space-y-4">
+              <Label>Color Scheme</Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {themes.map((t) => (
+                  <div key={t.theme}>
+                    <button
+                      onClick={() => {
+                          setCurrentColorTheme(t.theme);
+                          setCustomColor(t.color);
+                      }}
+                      className={cn(
+                        "flex flex-col items-center justify-center rounded-md border-2 p-1 w-full",
+                        currentColorTheme === t.theme ? "border-primary" : "border-muted"
+                      )}
+                    >
+                      <div className="flex items-center gap-2 py-2">
+                         <div className={cn("w-6 h-6 rounded-full",
+                           t.theme === 'default' && 'bg-[#A020F0]',
+                           t.theme === 'ocean' && 'bg-[#1E90FF]',
+                           t.theme === 'forest' && 'bg-[#228B22]',
+                           t.theme === 'sunset' && 'bg-[#FF4500]',
+                         )} />
+                         <span className="text-sm font-medium">{t.name}</span>
+                         {currentColorTheme === t.theme && <Check className="h-5 w-5 text-primary" />}
+                      </div>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-4 pt-4">
+                  <Label htmlFor="custom-color">Custom Color</Label>
+                  <Input
+                      id="custom-color"
+                      type="color"
+                      value={customColor}
+                      onChange={(e) => {
+                          setCustomColor(e.target.value)
+                          setCurrentColorTheme('custom')
+                      }}
+                      className="w-20 h-10 p-1"
+                  />
+              </div>
+            </div>
           </div>
           
-          <div className="space-y-4">
-            <Label className="text-base">Color Scheme</Label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {themes.map((t) => (
-                <div key={t.theme}>
-                  <button
-                    onClick={() => {
-                        setCurrentColorTheme(t.theme);
-                        setCustomColor(t.color);
-                    }}
-                    className={cn(
-                      "flex flex-col items-center justify-center rounded-md border-2 p-1 w-full",
-                      currentColorTheme === t.theme ? "border-primary" : "border-muted"
-                    )}
-                  >
-                    <div className="flex items-center gap-2 py-2">
-                       <div className={cn("w-6 h-6 rounded-full",
-                         t.theme === 'default' && 'bg-[#A020F0]',
-                         t.theme === 'ocean' && 'bg-[#1E90FF]',
-                         t.theme === 'forest' && 'bg-[#228B22]',
-                         t.theme === 'sunset' && 'bg-[#FF4500]',
-                       )} />
-                       <span className="text-sm font-medium">{t.name}</span>
-                       {currentColorTheme === t.theme && <Check className="h-5 w-5 text-primary" />}
-                    </div>
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-4 pt-4">
-                <Label htmlFor="custom-color" className="text-base">Custom Color</Label>
-                <Input
-                    id="custom-color"
-                    type="color"
-                    value={customColor}
-                    onChange={(e) => {
-                        setCustomColor(e.target.value)
-                        setCurrentColorTheme('custom')
-                    }}
-                    className="w-20 h-10 p-1"
-                />
-            </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={handleReset}>Reset</Button>
+            <Button onClick={handleSave}>Save</Button>
           </div>
-          
+
+          <Separator />
+
            <div className="space-y-4">
              <div className="flex items-center justify-between">
-                <Label className="text-base">Vibe Code Chat History</Label>
+                <Label className="text-base font-medium">Vibe Code Chat History</Label>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" size="sm" disabled={messages.length === 0}>
@@ -237,59 +249,4 @@ export default function SettingsPage() {
                       <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                       <AlertDialogDescription>
                         This action cannot be undone. This will permanently delete your chat history.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleClearHistory}>Continue</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-             </div>
-             <Card className="h-96">
-                <ScrollArea className="h-full">
-                    <CardContent className="p-6">
-                    {messages.length > 0 ? (
-                        <div className="space-y-6">
-                        {messages.map((message, index) => (
-                            <div key={index} className={cn("flex items-start gap-4", message.role === 'user' ? 'justify-end' : '')}>
-                                {message.role === 'assistant' && (
-                                    <Avatar className="h-8 w-8 border">
-                                        <AvatarFallback><Bot size={20} /></AvatarFallback>
-                                    </Avatar>
-                                )}
-                                <div className={cn(
-                                    "max-w-[80%] rounded-lg p-3 text-sm whitespace-pre-wrap font-code",
-                                    message.role === 'user'
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted"
-                                )}>
-                                    {message.content}
-                                </div>
-                                {message.role === 'user' && (
-                                    <Avatar className="h-8 w-8 border">
-                                        <AvatarFallback><User size={20} /></AvatarFallback>
-                                    </Avatar>
-                                )}
-                            </div>
-                        ))}
-                        </div>
-                    ) : (
-                        <div className="flex h-full items-center justify-center text-muted-foreground">
-                            <p>No chat history yet.</p>
-                        </div>
-                    )}
-                    </CardContent>
-                </ScrollArea>
-             </Card>
-           </div>
-        </CardContent>
-        <CardFooter className="flex justify-end gap-2">
-            <Button variant="outline" onClick={handleReset}>Reset</Button>
-            <Button onClick={handleSave}>Save</Button>
-        </CardFooter>
-      </Card>
-    </div>
-  );
-}
+                      </Aler
