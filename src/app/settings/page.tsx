@@ -249,4 +249,44 @@ export default function SettingsPage() {
                       <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                       <AlertDialogDescription>
                         This action cannot be undone. This will permanently delete your chat history.
-                      </Aler
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleClearHistory}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+             </div>
+             {messages.length > 0 ? (
+                <ScrollArea className="h-64 w-full rounded-md border">
+                    <div className="p-4 space-y-4">
+                        {messages.map((message, index) => (
+                             <div key={index} className="flex items-start gap-3">
+                                <Avatar className="h-8 w-8 border">
+                                    <AvatarFallback>{message.role === 'user' ? <User size={20} /> : <Bot size={20} />}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                    <p className="text-sm font-semibold capitalize">{message.role}</p>
+                                    <div className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap font-code">
+                                        {message.content}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+             ) : (
+                <div className="flex items-center justify-center h-24 rounded-md border border-dashed">
+                    <p className="text-sm text-muted-foreground">No chat history found.</p>
+                </div>
+             )}
+           </div>
+
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+    
