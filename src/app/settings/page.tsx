@@ -46,6 +46,195 @@ const languages = [
     { value: 'fr', label: 'French (Français)' },
 ]
 
+const translations: Record<string, Record<string, string>> = {
+    en: {
+        settings: 'Settings',
+        manageSettings: 'Manage your application settings.',
+        appearance: 'Appearance',
+        darkMode: 'Dark/Light Mode',
+        colorScheme: 'Color Scheme',
+        customColor: 'Custom Color',
+        language: 'Language',
+        appLanguage: 'App Language',
+        save: 'Save',
+        reset: 'Reset',
+        chatHistory: 'Vibe Code Chat History',
+        clearHistory: 'Clear History',
+        areYouSure: 'Are you absolutely sure?',
+        cannotBeUndone: 'This action cannot be undone. This will permanently delete your chat history.',
+        cancel: 'Cancel',
+        continue: 'Continue',
+        noHistory: 'No chat history found.',
+        settingsSaved: 'Settings Saved',
+        settingsApplied: 'Your new settings have been applied.',
+        historyCleared: 'Chat History Cleared',
+        historyDeleted: 'Your Vibe Code conversation history has been deleted.'
+    },
+    hi: {
+        settings: 'सेटिंग्स',
+        manageSettings: 'अपने एप्लिकेशन सेटिंग्स प्रबंधित करें।',
+        appearance: 'दिखावट',
+        darkMode: 'डार्क/लाइट मोड',
+        colorScheme: 'रंग योजना',
+        customColor: 'कस्टम रंग',
+        language: 'भाषा',
+        appLanguage: 'ऐप भाषा',
+        save: 'सहेजें',
+        reset: 'रीसेट करें',
+        chatHistory: 'वाइब कोड चैट इतिहास',
+        clearHistory: 'इतिहास साफ़ करें',
+        areYouSure: 'क्या आप बिल्कुल निश्चित हैं?',
+        cannotBeUndone: 'यह क्रिया पूर्ववत नहीं की जा सकती। यह आपके चैट इतिहास को स्थायी रूप से हटा देगा।',
+        cancel: 'रद्द करें',
+        continue: 'जारी रखें',
+        noHistory: 'कोई चैट इतिहास नहीं मिला।',
+        settingsSaved: 'सेटिंग्स सहेजी गईं',
+        settingsApplied: 'आपकी नई सेटिंग्स लागू कर दी गई हैं।',
+        historyCleared: 'चैट इतिहास साफ़ किया गया',
+        historyDeleted: 'आपका वाइब कोड वार्तालाप इतिहास हटा दिया गया है।'
+    },
+    es: {
+        settings: 'Configuración',
+        manageSettings: 'Gestiona la configuración de tu aplicación.',
+        appearance: 'Apariencia',
+        darkMode: 'Modo Oscuro/Claro',
+        colorScheme: 'Esquema de Colores',
+        customColor: 'Color Personalizado',
+        language: 'Idioma',
+        appLanguage: 'Idioma de la Aplicación',
+        save: 'Guardar',
+        reset: 'Restablecer',
+        chatHistory: 'Historial de Chat de Vibe Code',
+        clearHistory: 'Borrar Historial',
+        areYouSure: '¿Estás absolutamente seguro?',
+        cannotBeUndone: 'Esta acción no se puede deshacer. Esto eliminará permanentemente tu historial de chat.',
+        cancel: 'Cancelar',
+        continue: 'Continuar',
+        noHistory: 'No se encontró historial de chat.',
+        settingsSaved: 'Configuración Guardada',
+        settingsApplied: 'Tu nueva configuración ha sido aplicada.',
+        historyCleared: 'Historial de Chat Borrado',
+        historyDeleted: 'Tu historial de conversaciones de Vibe Code ha sido eliminado.'
+    },
+    // Add other languages here...
+    fr: {
+        settings: 'Paramètres',
+        manageSettings: 'Gérez les paramètres de votre application.',
+        appearance: 'Apparence',
+        darkMode: 'Mode Sombre/Clair',
+        colorScheme: 'Palette de couleurs',
+        customColor: 'Couleur personnalisée',
+        language: 'Langue',
+        appLanguage: 'Langue de l\'application',
+        save: 'Enregistrer',
+        reset: 'Réinitialiser',
+        chatHistory: 'Historique des discussions de Vibe Code',
+        clearHistory: 'Effacer l\'historique',
+        areYouSure: 'Êtes-vous absolument certain(e) ?',
+        cannotBeUndone: 'Cette action est irréversible. Cela supprimera définitivement votre historique de discussion.',
+        cancel: 'Annuler',
+        continue: 'Continuer',
+        noHistory: 'Aucun historique de discussion trouvé.',
+        settingsSaved: 'Paramètres enregistrés',
+        settingsApplied: 'Vos nouveaux paramètres ont été appliqués.',
+        historyCleared: 'Historique des discussions effacé',
+        historyDeleted: 'Votre historique de conversation Vibe Code a été supprimé.'
+    },
+    mr: {
+        settings: 'सेटिंग्ज',
+        manageSettings: 'तुमच्या अनुप्रयोगाची सेटिंग्ज व्यवस्थापित करा.',
+        appearance: 'स्वरूप',
+        darkMode: 'गडद/प्रकाश मोड',
+        colorScheme: 'रंग योजना',
+        customColor: 'सानुकूल रंग',
+        language: 'भाषा',
+        appLanguage: 'अॅप भाषा',
+        save: 'जतन करा',
+        reset: 'रीसेट करा',
+        chatHistory: 'वाइब कोड चॅट इतिहास',
+        clearHistory: 'इतिहास साफ करा',
+        areYouSure: 'तुम्ही पूर्णपणे निश्चित आहात का?',
+        cannotBeUndone: 'ही क्रिया पूर्ववत केली जाऊ शकत नाही. हे तुमचा चॅट इतिहास कायमचा हटवेल.',
+        cancel: 'रद्द करा',
+        continue: 'सुरू ठेवा',
+        noHistory: 'चॅट इतिहास आढळला नाही.',
+        settingsSaved: 'सेटिंग्ज जतन केल्या',
+        settingsApplied: 'तुमची नवीन सेटिंग्ज लागू केली आहेत.',
+        historyCleared: 'चॅट इतिहास साफ केला',
+        historyDeleted: 'तुमचा वाइब कोड संभाषण इतिहास हटवला गेला आहे.'
+    },
+    te: {
+        settings: 'సెట్టింగ్‌లు',
+        manageSettings: 'మీ అప్లికేషన్ సెట్టింగ్‌లను నిర్వహించండి.',
+        appearance: 'స్వరూపం',
+        darkMode: 'చీకటి/తేలికపాటి మోడ్',
+        colorScheme: 'రంగు పథకం',
+        customColor: 'అనుకూల రంగు',
+        language: 'భాష',
+        appLanguage: 'యాప్ భాష',
+        save: 'సేవ్ చేయండి',
+        reset: 'రీసెట్ చేయండి',
+        chatHistory: 'వైబ్ కోడ్ చాట్ చరిత్ర',
+        clearHistory: 'చరిత్రను క్లియర్ చేయండి',
+        areYouSure: 'మీరు ఖచ్చితంగా ఖಚಿತంగా ఉన్నారా?',
+        cannotBeUndone: 'ఈ చర్యను రద్దు చేయడం సాధ్యం కాదు. ఇది మీ చాట్ చరిత్రను శాశ్వతంగా తొలగిస్తుంది.',
+        cancel: 'రద్దు చేయండి',
+        continue: 'కొనసాగించండి',
+        noHistory: 'చాట్ చరిత్ర కనుగొనబడలేదు.',
+        settingsSaved: 'సెట్టింగ్‌లు సేవ్ చేయబడ్డాయి',
+        settingsApplied: 'మీ కొత్త సెట్టింగ్‌లు వర్తింపజేయబడ్డాయి.',
+        historyCleared: 'చాట్ చరిత్ర క్లియర్ చేయబడింది',
+        historyDeleted: 'మీ వైబ్ కోడ్ సంభాషణ చరిత్ర తొలగించబడింది.'
+    },
+    kn: {
+        settings: 'ಸೆಟ್ಟಿಂಗ್‌ಗಳು',
+        manageSettings: 'ನಿಮ್ಮ ಅಪ್ಲಿಕೇಶನ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ನಿರ್ವಹಿಸಿ.',
+        appearance: 'ಗೋಚರತೆ',
+        darkMode: 'ಡಾರ್ಕ್/ಲೈಟ್ ಮೋಡ್',
+        colorScheme: 'ಬಣ್ಣದ ಯೋಜನೆ',
+        customColor: 'ಕಸ್ಟಮ್ ಬಣ್ಣ',
+        language: 'ಭಾಷೆ',
+        appLanguage: 'ಅಪ್ಲಿಕೇಶನ್ ಭಾಷೆ',
+        save: 'ಉಳಿಸಿ',
+        reset: 'ಮರುಹೊಂದಿಸಿ',
+        chatHistory: 'ವೈಬ್ ಕೋಡ್ ಚಾಟ್ ಇತಿಹಾಸ',
+        clearHistory: 'ಇತಿಹಾಸವನ್ನು ತೆರವುಗೊಳಿಸಿ',
+        areYouSure: 'ನೀವು ಖಚಿತವಾಗಿ ಖಚಿತವಾಗಿದ್ದೀರಾ?',
+        cannotBeUndone: 'ಈ ಕ್ರಿಯೆಯನ್ನು ಹಿಂತಿರುಗಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ಇದು ನಿಮ್ಮ ಚಾಟ್ ಇತಿಹಾಸವನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸುತ್ತದೆ.',
+        cancel: 'ರದ್ದುಮಾಡಿ',
+        continue: 'ಮುಂದುವರಿಸಿ',
+        noHistory: 'ಯಾವುದೇ ಚಾಟ್ ಇತಿಹಾಸ ಕಂಡುಬಂದಿಲ್ಲ.',
+        settingsSaved: 'ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಉಳಿಸಲಾಗಿದೆ',
+        settingsApplied: 'ನಿಮ್ಮ ಹೊಸ ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಅನ್ವಯಿಸಲಾಗಿದೆ.',
+        historyCleared: 'ಚಾಟ್ ಇತಿಹಾಸವನ್ನು ತೆರವುಗೊಳಿಸಲಾಗಿದೆ',
+        historyDeleted: 'ನಿಮ್ಮ ವೈಬ್ ಕೋಡ್ ಸಂಭಾಷಣೆ ಇತಿಹಾಸವನ್ನು ಅಳಿಸಲಾಗಿದೆ.'
+    },
+     gu: {
+        settings: 'સેટિંગ્સ',
+        manageSettings: 'તમારી એપ્લિકેશન સેટિંગ્સ સંચાલિત કરો.',
+        appearance: 'દેખાવ',
+        darkMode: 'ડાર્ક/લાઇટ મોડ',
+        colorScheme: 'રંગ યોજના',
+        customColor: 'કસ્ટમ રંગ',
+        language: 'ભાષા',
+        appLanguage: 'એપ્લિકેશન ભાષા',
+        save: 'સાચવો',
+        reset: 'રીસેટ કરો',
+        chatHistory: 'વાઇબ કોડ ચેટ ઇતિહાસ',
+        clearHistory: 'ઇતિહાસ સાફ કરો',
+        areYouSure: 'શું તમે ખાતરીપૂર્વક ખાતરી કરો છો?',
+        cannotBeUndone: 'આ ક્રિયાને પૂર્વવત્ કરી શકાતી નથી. આ તમારા ચેટ ઇતિહાસને કાયમ માટે કાઢી નાખશે.',
+        cancel: 'રદ કરો',
+        continue: 'ચાલુ રાખો',
+        noHistory: 'કોઈ ચેટ ઇતિહાસ મળ્યો નથી.',
+        settingsSaved: 'સેટિંગ્સ સાચવવામાં આવી',
+        settingsApplied: 'તમારી નવી સેટિંગ્સ લાગુ કરવામાં આવી છે.',
+        historyCleared: 'ચેટ ઇતિહાસ સાફ થયો',
+        historyDeleted: 'તમારો વાઇબ કોડ વાર્તાલાપ ઇતિહાસ કાઢી નાખવામાં આવ્યો છે.'
+    }
+};
+
+
 function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return null;
@@ -80,6 +269,8 @@ export default function SettingsPage() {
   const [currentColorTheme, setCurrentColorTheme] = React.useState('default');
   const [customColor, setCustomColor] = React.useState(themes[0].color);
   const [language, setLanguage] = React.useState('en');
+  
+  const t = translations[language] || translations.en;
 
   // Load saved settings on initial render
   React.useEffect(() => {
@@ -159,8 +350,8 @@ export default function SettingsPage() {
     }
     localStorage.setItem('language', language);
     toast({
-      title: "Settings Saved",
-      description: "Your new settings have been applied.",
+      title: t.settingsSaved,
+      description: t.settingsApplied,
     })
   }
   
@@ -183,8 +374,8 @@ export default function SettingsPage() {
   const handleClearHistory = () => {
     clearHistory();
     toast({
-        title: "Chat History Cleared",
-        description: "Your Vibe Code conversation history has been deleted."
+        title: t.historyCleared,
+        description: t.historyDeleted,
     })
   }
   
@@ -192,19 +383,19 @@ export default function SettingsPage() {
     <div className="flex justify-center items-start pt-16 h-[calc(100vh-4.1rem)]">
       <Card className="w-full max-w-4xl">
         <CardHeader>
-          <CardTitle>Settings</CardTitle>
-          <CardDescription>Manage your application settings.</CardDescription>
+          <CardTitle>{t.settings}</CardTitle>
+          <CardDescription>{t.manageSettings}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
           <div className="space-y-6">
-            <h3 className="text-lg font-medium">Appearance</h3>
+            <h3 className="text-lg font-medium">{t.appearance}</h3>
             <div className="flex items-center justify-between">
-              <Label htmlFor="theme-toggle">Dark/Light Mode</Label>
+              <Label htmlFor="theme-toggle">{t.darkMode}</Label>
               <ThemeToggle />
             </div>
             
             <div className="space-y-4">
-              <Label>Color Scheme</Label>
+              <Label>{t.colorScheme}</Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {themes.map((t) => (
                   <div key={t.theme}>
@@ -233,7 +424,7 @@ export default function SettingsPage() {
                 ))}
               </div>
               <div className="flex items-center gap-4 pt-4">
-                  <Label htmlFor="custom-color">Custom Color</Label>
+                  <Label htmlFor="custom-color">{t.customColor}</Label>
                   <Input
                       id="custom-color"
                       type="color"
@@ -251,11 +442,11 @@ export default function SettingsPage() {
           <Separator />
           
            <div className="space-y-6">
-            <h3 className="text-lg font-medium">Language</h3>
+            <h3 className="text-lg font-medium">{t.language}</h3>
              <div className="flex items-center justify-between">
                 <Label htmlFor="language-select" className="flex items-center gap-2">
                     <Languages className="h-5 w-5" />
-                    App Language
+                    {t.appLanguage}
                 </Label>
                 <Select value={language} onValueChange={setLanguage}>
                     <SelectTrigger className="w-[200px]" id="language-select">
@@ -272,31 +463,31 @@ export default function SettingsPage() {
 
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={handleReset}>Reset</Button>
-            <Button onClick={handleSave}>Save</Button>
+            <Button variant="outline" onClick={handleReset}>{t.reset}</Button>
+            <Button onClick={handleSave}>{t.save}</Button>
           </div>
 
           <Separator />
 
            <div className="space-y-4">
              <div className="flex items-center justify-between">
-                <Label className="text-base font-medium">Vibe Code Chat History</Label>
+                <Label className="text-base font-medium">{t.chatHistory}</Label>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" size="sm" disabled={messages.length === 0}>
-                        <Trash2 className="mr-2 h-4 w-4" /> Clear History
+                        <Trash2 className="mr-2 h-4 w-4" /> {t.clearHistory}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogTitle>{t.areYouSure}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete your chat history.
+                        {t.cannotBeUndone}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleClearHistory}>Continue</AlertDialogAction>
+                      <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleClearHistory}>{t.continue}</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -321,7 +512,7 @@ export default function SettingsPage() {
                 </ScrollArea>
              ) : (
                 <div className="flex items-center justify-center h-24 rounded-md border border-dashed">
-                    <p className="text-sm text-muted-foreground">No chat history found.</p>
+                    <p className="text-sm text-muted-foreground">{t.noHistory}</p>
                 </div>
              )}
            </div>
