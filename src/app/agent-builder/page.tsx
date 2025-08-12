@@ -126,9 +126,23 @@ export default function AgentBuilderPage() {
 
     // Dropping a new item from palette
     if (active.data.current?.isPaletteItem) {
-      if (over.id === 'canvas-droppable') {
-        const { step } = active.data.current;
-        setWorkflowSteps(prev => [...prev, { ...step, id: `instance-${Date.now()}` }]);
+      const { step } = active.data.current;
+      const newStep = { ...step, id: `instance-${Date.now()}` };
+      
+      const overId = over.id;
+      if (overId === 'canvas-droppable') {
+          // Dropped on the main canvas, add to the end
+          setWorkflowSteps(prev => [...prev, newStep]);
+      } else {
+          // Dropped on an existing step, insert it
+          const overIndex = workflowSteps.findIndex(s => s.id === overId);
+          if (overIndex !== -1) {
+              setWorkflowSteps(prev => {
+                  const newSteps = [...prev];
+                  newSteps.splice(overIndex, 0, newStep);
+                  return newSteps;
+              });
+          }
       }
       return;
     }
@@ -144,7 +158,7 @@ export default function AgentBuilderPage() {
         return arrayMove(steps, oldIndex, newIndex);
       });
     }
-  }, []);
+  }, [workflowSteps]);
 
   const handleRemoveStep = (id: UniqueIdentifier) => {
     setWorkflowSteps(prev => prev.filter(s => s.id !== id));
@@ -264,5 +278,3 @@ export default function AgentBuilderPage() {
     </DndContext>
   );
 }
-
-    
