@@ -6,7 +6,7 @@ import { Handle, Position, type NodeProps } from 'reactflow';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { AgentNodeData } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { FileCode, Palette, Bot, Search, GitCommit, TestTube, Waypoints, Replace, ScanText, Image as ImageI, LoaderCircle, CheckCircle, XCircle } from 'lucide-react';
+import { FileCode, Palette, Bot, Search, GitCommit, TestTube, Waypoints, Replace, ScanText, Image as ImageI, LoaderCircle, CheckCircle, XCircle, ShieldCheck, Database, Mail } from 'lucide-react';
 
 const agentIcons: Record<string, React.ReactNode> = {
     code: <FileCode className="h-5 w-5" />,
@@ -19,6 +19,9 @@ const agentIcons: Record<string, React.ReactNode> = {
     transform: <Replace className="h-5 w-5" />,
     summarize: <ScanText className="h-5 w-5" />,
     image: <ImageI className="h-5 w-5" />,
+    security: <ShieldCheck className="h-5 w-5" />,
+    database: <Database className="h-5 w-5" />,
+    email: <Mail className="h-5 w-5" />,
     running: <LoaderCircle className="h-5 w-5 animate-spin" />,
     success: <CheckCircle className="h-5 w-5 text-green-500" />,
     error: <XCircle className="h-5 w-5 text-red-500" />,

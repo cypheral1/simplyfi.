@@ -1,12 +1,13 @@
+
 "use client";
 
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { Bot, FileCode, Palette, Search, GitCommit, TestTube, Waypoints, Replace, ScanText, Image, PlayCircle, StopCircle } from "lucide-react";
+import { Bot, FileCode, Palette, Search, GitCommit, TestTube, Waypoints, Replace, ScanText, Image, PlayCircle, StopCircle, ShieldCheck, Database, Mail } from "lucide-react";
 
 const nodeTypes = [
-    { nodeType: 'start', type: 'start', label: 'Start', description: 'The starting point of the workflow.', icon: <PlayCircle /> },
-    { nodeType: 'end', type: 'end', label: 'End', description: 'The ending point of the workflow.', icon: <StopCircle /> },
+    { type: 'start', label: 'Start', description: 'The starting point of the workflow.', icon: <PlayCircle /> },
+    { type: 'end', label: 'End', description: 'The ending point of the workflow.', icon: <StopCircle /> },
 ];
 
 const agentTypes = [
@@ -20,13 +21,20 @@ const agentTypes = [
     { agentType: 'transform', label: 'Data Transformer', description: 'Transforms data from one format to another.', icon: <Replace /> },
     { agentType: 'summarize', label: 'Text Summarizer', description: 'Summarizes a long piece of text.', icon: <ScanText /> },
     { agentType: 'image', label: 'Image Generator', description: 'Generates an image from a prompt.', icon: <Image /> },
+    { agentType: 'security', label: 'Security Auditor', description: 'Scans code for vulnerabilities.', icon: <ShieldCheck /> },
+    { agentType: 'database', label: 'Database Designer', description: 'Generates a database schema.', icon: <Database /> },
+    { agentType: 'email', label: 'Email Responder', description: 'Drafts email responses.', icon: <Mail /> },
 ]
 
 export default function WorkflowAgentPalette() {
 
     const onDragStart = (event: React.DragEvent, nodeType: string, data: any) => {
-        const transferData = { ...data };
-        delete transferData.icon;
+        const transferData = { 
+            agentType: data.agentType,
+            type: data.type,
+            label: data.label,
+            description: data.description,
+        };
 
         event.dataTransfer.setData('application/reactflow', nodeType);
         event.dataTransfer.setData('application/json', JSON.stringify(transferData));
