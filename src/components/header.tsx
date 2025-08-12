@@ -1,4 +1,5 @@
-import { CodeXml, LayoutTemplate, Settings, Bot } from 'lucide-react';
+
+import { CodeXml, LayoutTemplate, Settings, Bot, Waypoints } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import Link from 'next/link';
 import { Button } from './ui/button';
@@ -22,6 +23,10 @@ export default function Header() {
             <Link href="/ui-builder" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
               <LayoutTemplate className="h-5 w-5" />
               <span>UI Builder</span>
+            </Link>
+             <Link href="/ai-workflows" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+              <Waypoints className="h-5 w-5" />
+              <span>AI Workflows</span>
             </Link>
           </nav>
         </div>

@@ -1,4 +1,3 @@
-"use client";
 
 import WorkflowView from "@/components/workflow-view";
 

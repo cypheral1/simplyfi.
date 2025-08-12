@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect } from 'react';
@@ -64,7 +65,6 @@ export default function WorkflowPropertiesPanel() {
           <Label>Agent Type</Label>
           <Input disabled value={selectedNode.data.agentType} />
         </div>
-        {/* Add more fields for prompt, model, etc. later */}
       </CardContent>
     </Card>
   );

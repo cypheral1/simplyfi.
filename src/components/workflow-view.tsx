@@ -1,8 +1,8 @@
+
 "use client";
 
 import React from 'react';
 import { ReactFlowProvider } from 'reactflow';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import WorkflowEditor from '@/components/workflow-editor';
 import WorkflowAgentPalette from '@/components/workflow-agent-palette';
@@ -30,7 +30,6 @@ export default function WorkflowView() {
         const workflow = { nodes, edges };
 
         try {
-            // Set all nodes to 'running' for visual feedback
             nodes.forEach(node => setNodeStatus(node.id, 'running'));
             
             const result = await executeWorkflowAction({ workflow, prompt });
@@ -39,7 +38,7 @@ export default function WorkflowView() {
                  result.log.forEach((logEntry, index) => {
                     setTimeout(() => {
                         setNodeStatus(logEntry.nodeId, logEntry.status);
-                    }, index * 500); // Stagger status updates
+                    }, index * 500);
                 });
                 toast({
                     title: "Workflow Execution Successful",

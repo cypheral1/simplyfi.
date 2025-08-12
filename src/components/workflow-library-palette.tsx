@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -5,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Library } from "lucide-react";
 import { useWorkflowStore } from "@/stores/workflow-store";
 import { workflowTemplates } from "@/lib/workflow-templates";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 export default function WorkflowLibraryPalette() {
     const { setNodes, setEdges } = useWorkflowStore();

@@ -1,11 +1,11 @@
+
 "use client";
 
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { Bot, FileCode, Palette, Search, GitCommit, TestTube, Waypoints, Replace, ScanText, Image } from "lucide-react";
-import type { AgentNodeData } from "@/lib/types";
 
-const agentTypes: { agentType: string; label: string; description: string; icon: React.ReactNode }[] = [
+const agentTypes = [
     { agentType: 'code', label: 'Code Generator', description: 'Generates code from a prompt.', icon: <FileCode /> },
     { agentType: 'ui', label: 'UI Designer', description: 'Generates UI from a prompt.', icon: <Palette /> },
     { agentType: 'docs', label: 'Docs Writer', description: 'Writes documentation.', icon: <Bot /> },
@@ -20,7 +20,7 @@ const agentTypes: { agentType: string; label: string; description: string; icon:
 
 export default function WorkflowAgentPalette() {
 
-    const onDragStart = (event: React.DragEvent, nodeType: string, agent: { agentType: string; label: string; description: string; }) => {
+    const onDragStart = (event: React.DragEvent, nodeType: string, agent: Omit<typeof agentTypes[0], 'icon'>) => {
         const dataForTransfer = {
             agentType: agent.agentType,
             label: agent.label,
@@ -33,24 +33,32 @@ export default function WorkflowAgentPalette() {
 
     return (
         <div className="space-y-3">
-            {agentTypes.map(agent => (
-                 <Card 
-                    key={agent.agentType} 
-                    className="p-3 cursor-grab hover:shadow-md hover:border-primary/50 transition-all"
-                    draggable
-                    onDragStart={(event) => onDragStart(event, 'agent', agent)}
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="bg-primary/10 text-primary p-2 rounded-md">
-                            {agent.icon}
+            {agentTypes.map(agent => {
+                 // Create a serializable version of the agent data, excluding the icon
+                 const serializableAgent = {
+                    agentType: agent.agentType,
+                    label: agent.label,
+                    description: agent.description
+                 }
+                 return (
+                     <Card 
+                        key={agent.agentType} 
+                        className="p-3 cursor-grab hover:shadow-md hover:border-primary/50 transition-all"
+                        draggable
+                        onDragStart={(event) => onDragStart(event, 'agent', serializableAgent)}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="bg-primary/10 text-primary p-2 rounded-md">
+                                {agent.icon}
+                            </div>
+                            <div>
+                                <p className="font-semibold text-sm">{agent.label}</p>
+                                <p className="text-xs text-muted-foreground">{agent.description}</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="font-semibold text-sm">{agent.label}</p>
-                            <p className="text-xs text-muted-foreground">{agent.description}</p>
-                        </div>
-                    </div>
-                 </Card>
-            ))}
+                     </Card>
+                )
+            })}
         </div>
     )
 }

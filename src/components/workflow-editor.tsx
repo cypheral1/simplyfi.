@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useCallback, useMemo } from 'react';
@@ -91,7 +92,6 @@ function WorkflowEditorComponent() {
     );
 }
 
-// Wrap with ReactFlowProvider
 export default function WorkflowEditor() {
     return (
         <ReactFlowProvider>
