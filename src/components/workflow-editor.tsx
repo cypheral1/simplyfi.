@@ -11,7 +11,7 @@ import ReactFlow, {
   type OnEdgesChange,
   type OnConnect,
   type NodeTypes,
-  ReactFlowProvider,
+  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -19,9 +19,9 @@ import { useWorkflowStore } from '@/stores/workflow-store';
 import { AgentNode } from './agent-node';
 import type { AgentNodeData } from '@/lib/types';
 
-function WorkflowEditorComponent() {
+export default function WorkflowEditor() {
     const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } = useWorkflowStore();
-    const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+    const { screenToFlowPosition } = useReactFlow();
 
     const nodeTypes: NodeTypes = useMemo(() => ({ 
         agent: AgentNode 
@@ -44,10 +44,8 @@ function WorkflowEditorComponent() {
             }
             
             const data = JSON.parse(dataString);
-
-            if (!reactFlowInstance) return;
-
-            const position = reactFlowInstance.screenToFlowPosition({
+            
+            const position = screenToFlowPosition({
                 x: event.clientX,
                 y: event.clientY,
             });
@@ -61,7 +59,7 @@ function WorkflowEditorComponent() {
 
             addNode(newNode);
         },
-        [reactFlowInstance, addNode]
+        [screenToFlowPosition, addNode]
     );
 
     return (
@@ -71,7 +69,6 @@ function WorkflowEditorComponent() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            onInit={setReactFlowInstance}
             onDrop={onDrop}
             onDragOver={onDragOver}
             nodeTypes={nodeTypes}
@@ -82,12 +79,4 @@ function WorkflowEditorComponent() {
             <Controls />
         </ReactFlow>
     );
-}
-
-export default function WorkflowEditor() {
-    return (
-        <ReactFlowProvider>
-            <WorkflowEditorComponent />
-        </ReactFlowProvider>
-    )
 }

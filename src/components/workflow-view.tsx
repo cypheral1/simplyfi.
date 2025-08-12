@@ -1,6 +1,8 @@
+
 "use client";
 
 import React, { useState, useTransition } from 'react';
+import { ReactFlowProvider } from 'reactflow';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bot, Library, Play, Loader2 } from 'lucide-react';
@@ -80,47 +82,49 @@ export default function WorkflowView() {
     }
 
     return (
-        <div className="flex h-[calc(100vh-4.1rem)]">
-            <aside className="w-96 border-r bg-background p-4 flex flex-col gap-4">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Run Workflow</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <Textarea 
-                            placeholder="Enter your prompt here..."
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            rows={4}
-                        />
-                        <Button onClick={handleRunWorkflow} disabled={isExecuting || nodes.length === 0} className="w-full">
-                            {isExecuting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
-                            {isExecuting ? 'Executing...' : 'Run Workflow'}
-                        </Button>
-                    </CardContent>
-                </Card>
-                <Card className="h-full flex-1">
-                    <CardContent className="p-4 h-full">
-                       <Tabs defaultValue="agents" className="h-full flex flex-col">
-                            <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="agents"><Bot className="mr-2 h-4 w-4" /> Agents</TabsTrigger>
-                                <TabsTrigger value="library"><Library className="mr-2 h-4 w-4" /> Library</TabsTrigger>
-                            </TabsList>
-                            <ScrollArea className="flex-1 mt-4 pr-3">
-                                <TabsContent value="agents">
-                                    <WorkflowAgentPalette />
-                                </TabsContent>
-                                <TabsContent value="library">
-                                    <WorkflowLibraryPalette />
-                                </TabsContent>
-                            </ScrollArea>
-                       </Tabs>
-                    </CardContent>
-                </Card>
-            </aside>
-            <main className="flex-1 bg-muted/30">
-                <WorkflowEditor />
-            </main>
-        </div>
+        <ReactFlowProvider>
+            <div className="flex h-[calc(100vh-4.1rem)]">
+                <aside className="w-96 border-r bg-background p-4 flex flex-col gap-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Run Workflow</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <Textarea 
+                                placeholder="Enter your prompt here..."
+                                value={prompt}
+                                onChange={(e) => setPrompt(e.target.value)}
+                                rows={4}
+                            />
+                            <Button onClick={handleRunWorkflow} disabled={isExecuting || nodes.length === 0} className="w-full">
+                                {isExecuting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
+                                {isExecuting ? 'Executing...' : 'Run Workflow'}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                    <Card className="h-full flex-1">
+                        <CardContent className="p-4 h-full">
+                           <Tabs defaultValue="agents" className="h-full flex flex-col">
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="agents"><Bot className="mr-2 h-4 w-4" /> Agents</TabsTrigger>
+                                    <TabsTrigger value="library"><Library className="mr-2 h-4 w-4" /> Library</TabsTrigger>
+                                </TabsList>
+                                <ScrollArea className="flex-1 mt-4 pr-3">
+                                    <TabsContent value="agents">
+                                        <WorkflowAgentPalette />
+                                    </TabsContent>
+                                    <TabsContent value="library">
+                                        <WorkflowLibraryPalette />
+                                    </TabsContent>
+                                </ScrollArea>
+                           </Tabs>
+                        </CardContent>
+                    </Card>
+                </aside>
+                <main className="flex-1 bg-muted/30">
+                    <WorkflowEditor />
+                </main>
+            </div>
+        </ReactFlowProvider>
     );
 }
