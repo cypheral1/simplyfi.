@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bot, Plus, Workflow, MessagesSquare, Code, Settings2, Folder, FileText, LifeBuoy, Search, GripVertical } from "lucide-react";
@@ -126,6 +126,11 @@ export default function AgentBuilderPage() {
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStepType[]>([]);
   const [activeStep, setActiveStep] = useState<WorkflowStepType | null>(null);
   const [selectedStepId, setSelectedStepId] = useState<UniqueIdentifier | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -205,6 +210,14 @@ export default function AgentBuilderPage() {
   };
 
   const selectedStep = workflowSteps.find(s => s.id === selectedStepId) || null;
+
+  if (!isClient) {
+    return (
+        <div className="flex h-[calc(100vh-4.1rem)] w-full items-center justify-center">
+            <p>Loading Builder...</p>
+        </div>
+    );
+  }
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
