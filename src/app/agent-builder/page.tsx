@@ -54,7 +54,7 @@ function DraggablePaletteItem({ step }: { step: Omit<WorkflowStepType, 'id'> & {
   );
 }
 
-function SortableWorkflowStep({ step, onRemove }: { step: WorkflowStepType; onRemove: (id: UniqueIdentifier) => void }) {
+function SortableWorkflowStep({ step, onRemove, onSelect, isSelected }: { step: WorkflowStepType; onRemove: (id: UniqueIdentifier) => void; onSelect: (id: UniqueIdentifier) => void; isSelected: boolean }) {
   const {
     attributes,
     listeners,
@@ -71,8 +71,8 @@ function SortableWorkflowStep({ step, onRemove }: { step: WorkflowStepType; onRe
   };
   
   return (
-    <div ref={setNodeRef} style={style} className="w-full max-w-sm mx-auto">
-        <Card className="p-4 bg-card relative group">
+    <div ref={setNodeRef} style={style} className="w-full max-w-sm mx-auto" onClick={() => onSelect(step.id)}>
+        <Card className={cn("p-4 bg-card relative group transition-all", isSelected ? "border-primary shadow-lg" : "border-transparent")}>
           <div {...attributes} {...listeners} className="cursor-grab absolute top-2 left-2 p-2 opacity-50 group-hover:opacity-100 transition-opacity">
             <GripVertical className="h-5 w-5 text-muted-foreground" />
           </div>
@@ -83,7 +83,7 @@ function SortableWorkflowStep({ step, onRemove }: { step: WorkflowStepType; onRe
                   <CardDescription className="text-sm">{step.description}</CardDescription>
               </div>
           </div>
-          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7 opacity-50 group-hover:opacity-100" onClick={() => onRemove(step.id)}>
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7 opacity-50 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); onRemove(step.id); }}>
               <Plus className="h-4 w-4 rotate-45 text-destructive" />
           </Button>
       </Card>
@@ -91,9 +91,41 @@ function SortableWorkflowStep({ step, onRemove }: { step: WorkflowStepType; onRe
   );
 }
 
+function PropertiesPanel({ selectedStep }: { selectedStep: WorkflowStepType | null }) {
+    if (!selectedStep) {
+        return (
+            <Card className="sticky top-0">
+                <CardHeader>
+                    <CardTitle>Properties</CardTitle>
+                    <CardDescription>Select a step to see its properties.</CardDescription>
+                </CardHeader>
+                <CardContent className="text-center text-muted-foreground pt-8">
+                    <Settings2 className="mx-auto h-10 w-10" />
+                    <p className="mt-2">No step selected</p>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card className="sticky top-0">
+            <CardHeader>
+                <CardTitle>{selectedStep.title}</CardTitle>
+                <CardDescription>Configure the properties for this step.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {/* Placeholder for actual properties form */}
+                <p className="text-sm text-muted-foreground">Properties for "{selectedStep.title}" will be here.</p>
+            </CardContent>
+        </Card>
+    );
+}
+
+
 export default function AgentBuilderPage() {
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStepType[]>([]);
   const [activeStep, setActiveStep] = useState<WorkflowStepType | null>(null);
+  const [selectedStepId, setSelectedStepId] = useState<UniqueIdentifier | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -116,6 +148,7 @@ export default function AgentBuilderPage() {
         const step = workflowSteps.find(s => s.id === activeId);
         if(step) setActiveStep(step);
     }
+    setSelectedStepId(null);
   }, [workflowSteps]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -126,7 +159,6 @@ export default function AgentBuilderPage() {
   
     const isPaletteItem = active.data.current?.isPaletteItem;
   
-    // Logic for dropping a new item from the palette
     if (isPaletteItem) {
       const { step } = active.data.current;
       const newStep = { ...step, id: `instance-${Date.now()}` };
@@ -134,25 +166,22 @@ export default function AgentBuilderPage() {
       const overId = over.id;
   
       if (overId === 'canvas-droppable' || workflowSteps.find(s => s.id === overId)) {
-        // If dropped on the canvas or an existing item
         const overIndex = workflowSteps.findIndex(s => s.id === overId);
         
         if (overIndex !== -1) {
-          // Insert at the specific position
            setWorkflowSteps(prev => {
             const newSteps = [...prev];
             newSteps.splice(overIndex, 0, newStep);
             return newSteps;
           });
         } else {
-          // Add to the end if not dropped on a specific item
           setWorkflowSteps(prev => [...prev, newStep]);
         }
+        setSelectedStepId(newStep.id);
       }
       return;
     }
   
-    // Logic for reordering existing items on the canvas
     const activeId = active.id;
     const overId = over.id;
   
@@ -160,7 +189,6 @@ export default function AgentBuilderPage() {
       setWorkflowSteps((steps) => {
         const oldIndex = steps.findIndex((s) => s.id === activeId);
         const newIndex = steps.findIndex((s) => s.id === overId);
-        // Ensure both items are found before attempting to move
         if (oldIndex !== -1 && newIndex !== -1) {
           return arrayMove(steps, oldIndex, newIndex);
         }
@@ -171,8 +199,12 @@ export default function AgentBuilderPage() {
   
   const handleRemoveStep = (id: UniqueIdentifier) => {
     setWorkflowSteps(prev => prev.filter(s => s.id !== id));
+    if (selectedStepId === id) {
+        setSelectedStepId(null);
+    }
   };
 
+  const selectedStep = workflowSteps.find(s => s.id === selectedStepId) || null;
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
@@ -230,7 +262,7 @@ export default function AgentBuilderPage() {
           </Sidebar>
         
         {/* Node Palette - now in center top */}
-        <main className="flex-1 flex flex-col p-4 bg-muted/20 overflow-y-auto">
+        <main className="flex-1 flex flex-col p-4 bg-muted/20 overflow-y-auto" onClick={() => setSelectedStepId(null)}>
            <div className="bg-card border rounded-lg p-3 mb-4">
                <h2 className="text-lg font-semibold mb-2">AI Steps</h2>
                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -245,7 +277,7 @@ export default function AgentBuilderPage() {
               {workflowSteps.length > 0 ? (
                 <SortableContext items={workflowSteps.map(s => s.id)} strategy={verticalListSortingStrategy}>
                   {workflowSteps.map(step => (
-                    <SortableWorkflowStep key={step.id} step={step} onRemove={handleRemoveStep} />
+                    <SortableWorkflowStep key={step.id} step={step} onRemove={handleRemoveStep} onSelect={setSelectedStepId} isSelected={selectedStepId === step.id} />
                   ))}
                 </SortableContext>
               ) : (
@@ -261,16 +293,7 @@ export default function AgentBuilderPage() {
 
         {/* Properties Panel */}
         <aside className="w-80 border-l p-4 bg-card overflow-y-auto hidden lg:block">
-           <Card className="sticky top-0">
-              <CardHeader>
-                  <CardTitle>Properties</CardTitle>
-                  <CardDescription>Select a step to see its properties.</CardDescription>
-              </CardHeader>
-              <CardContent className="text-center text-muted-foreground pt-8">
-                   <Settings2 className="mx-auto h-10 w-10" />
-                  <p className="mt-2">No step selected</p>
-              </CardContent>
-          </Card>
+           <PropertiesPanel selectedStep={selectedStep} />
         </aside>
       </div>
     </SidebarProvider>
