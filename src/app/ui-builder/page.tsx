@@ -166,8 +166,8 @@ const moveComponent = (components: Component[], activeId: UniqueIdentifier, over
 };
 
 const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
-  button: (props) => <Button {...props}>{props.children || 'Click me'}</Button>,
-  card: (props) => (
+  button: ({ isSelected, ...props }) => <Button {...props}>{props.children || 'Click me'}</Button>,
+  card: ({ isSelected, ...props }) => (
     <Card {...props}>
       <CardHeader>
         <CardTitle>{props.title || 'Card Title'}</CardTitle>
@@ -178,12 +178,12 @@ const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
       </CardContent>
     </Card>
   ),
-  input: (props) => <Input {...props} placeholder={props.placeholder || 'Input field'} />,
-  h1: (props) => <h1 {...props} className="text-4xl font-bold tracking-tight">{props.children || 'Heading 1'}</h1>,
-  p: (props) => <p {...props}>{props.children || 'This is a paragraph of text.'}</p>,
-  textarea: (props) => <Textarea {...props} placeholder={props.placeholder || 'Text area'} />,
-  checkbox: (props) => <div className="flex items-center space-x-2"><Checkbox id={props.id || 'checkbox'} checked={props.checked} /><Label htmlFor={props.id || 'checkbox'}>{props.children || 'Accept terms'}</Label></div>,
-  select: (props) => (
+  input: ({ isSelected, ...props }) => <Input {...props} placeholder={props.placeholder || 'Input field'} />,
+  h1: ({ isSelected, ...props }) => <h1 {...props} className="text-4xl font-bold tracking-tight">{props.children || 'Heading 1'}</h1>,
+  p: ({ isSelected, ...props }) => <p {...props}>{props.children || 'This is a paragraph of text.'}</p>,
+  textarea: ({ isSelected, ...props }) => <Textarea {...props} placeholder={props.placeholder || 'Text area'} />,
+  checkbox: ({ isSelected, ...props }) => <div className="flex items-center space-x-2"><Checkbox id={props.id || 'checkbox'} checked={props.checked} /><Label htmlFor={props.id || 'checkbox'}>{props.children || 'Accept terms'}</Label></div>,
+  select: ({ isSelected, ...props }) => (
     <Select value={props.value}>
       <SelectTrigger className="w-[180px]">
         <SelectValue placeholder={props.placeholder || "Select an option"} />
@@ -195,9 +195,9 @@ const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
       </SelectContent>
     </Select>
   ),
-  switch: (props) => <div className="flex items-center space-x-2"><Switch id={props.id || 'switch'} checked={props.checked} /><Label htmlFor={props.id || 'switch'}>{props.children || 'Toggle me'}</Label></div>,
-  slider: (props) => <Slider {...props} defaultValue={[props.defaultValue]} max={props.max} step={props.step} className="w-full" />,
-  avatar: (props) => (
+  switch: ({ isSelected, ...props }) => <div className="flex items-center space-x-2"><Switch id={props.id || 'switch'} checked={props.checked} /><Label htmlFor={props.id || 'switch'}>{props.children || 'Toggle me'}</Label></div>,
+  slider: ({ isSelected, ...props }) => <Slider {...props} defaultValue={[props.defaultValue]} max={props.max} step={props.step} className="w-full" />,
+  avatar: ({ isSelected, ...props }) => (
     <Avatar {...props}>
       <AvatarImage src={props.src || 'https://github.com/shadcn.png'} alt={props.alt || '@shadcn'} />
       <AvatarFallback>{props.fallback || 'CN'}</AvatarFallback>
@@ -212,16 +212,16 @@ const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
         isSelected={isSelected}
     />
   ),
-  alert: (props) => (
+  alert: ({ isSelected, ...props }) => (
     <Alert variant={props.variant}>
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>{props.title}</AlertTitle>
         <AlertDescription>{props.description}</AlertDescription>
     </Alert>
   ),
-  badge: (props) => <Badge variant={props.variant}>{props.children}</Badge>,
-  progress: (props) => <Progress value={props.value} />,
-  separator: (props) => <Separator />,
+  badge: ({ isSelected, ...props }) => <Badge variant={props.variant}>{props.children}</Badge>,
+  progress: ({ isSelected, ...props }) => <Progress value={props.value} />,
+  separator: ({ isSelected, ...props }) => <Separator {...props} />,
   tabs: ({children, props}) => (
     <Tabs defaultValue={props.defaultValue || "tab1"} className="w-full">
         <TabsList>
@@ -241,7 +241,7 @@ const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
         ))}
     </Tabs>
   ),
-  image: (props) => <Image src={props.src} alt={props.alt} width={props.width} height={props.height} className={props.className} />,
+  image: ({ isSelected, ...props }) => <Image src={props.src} alt={props.alt} width={props.width} height={props.height} className={props.className} />,
 };
 
 const initialProps: { [key: string]: any } = {
