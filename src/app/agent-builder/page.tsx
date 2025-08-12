@@ -24,9 +24,9 @@ const aiSteps = [
 
 export default function AgentBuilderPage() {
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={true}>
       <div className="flex h-[calc(100vh-4.1rem)] bg-background text-foreground">
-          <Sidebar collapsible="icon" side="left" variant="sidebar" className="group" defaultOpen={true}>
+          <Sidebar collapsible="icon" side="left" variant="sidebar" className="group">
               <SidebarContent className="p-0">
                   <div className="flex flex-col h-full">
                       <SidebarHeader className="p-2 border-b">
