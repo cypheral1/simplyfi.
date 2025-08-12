@@ -1,12 +1,17 @@
 
 "use client";
 
+import { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bot, Plus, Workflow, MessagesSquare, Code, Settings2, Folder, FileText, LifeBuoy, Search } from "lucide-react";
+import { Bot, Plus, Workflow, MessagesSquare, Code, Settings2, Folder, FileText, LifeBuoy, Search, GripVertical } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger, SidebarInset, SidebarFooter, SidebarProvider } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { DndContext, useDraggable, useDroppable, DragEndEvent, DragOverlay, UniqueIdentifier, closestCenter, PointerSensor, useSensor, useSensors, DragStartEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { cn } from '@/lib/utils';
 
 const workflowTemplates = [
     { title: "Customer Support Bot", description: "Automatically answer customer questions.", icon: <MessagesSquare className="w-5 h-5" /> },
@@ -14,16 +19,140 @@ const workflowTemplates = [
     { title: "Code Assistant", description: "Help developers write and debug code.", icon: <Code className="w-5 h-5" /> },
 ];
 
-const aiSteps = [
-    { title: "Start Trigger", description: "Define how the workflow starts (e.g., API call, schedule).", icon: <Bot className="w-8 h-8 text-primary" />, color: "bg-green-100 dark:bg-green-900/30" },
-    { title: "Run Prompt", description: "Generate text with a specified model and prompt.", icon: <FileText className="w-8 h-8 text-primary" />, color: "bg-blue-100 dark:bg-blue-900/30" },
-    { title: "Use Tool", description: "Integrate with external APIs or services.", icon: <Workflow className="w-8 h-8 text-primary" />, color: "bg-yellow-100 dark:bg-yellow-900/30" },
-    { title: "Conditional Logic", description: "Branch the workflow based on conditions.", icon: <Settings2 className="w-8 h-8 text-primary" />, color: "bg-purple-100 dark:bg-purple-900/30" },
+const aiStepsPalette = [
+    { id: 'start', title: "Start Trigger", description: "Define how the workflow starts (e.g., API call, schedule).", icon: <Bot className="w-8 h-8 text-primary" />, color: "bg-green-100 dark:bg-green-900/30" },
+    { id: 'prompt', title: "Run Prompt", description: "Generate text with a specified model and prompt.", icon: <FileText className="w-8 h-8 text-primary" />, color: "bg-blue-100 dark:bg-blue-900/30" },
+    { id: 'tool', title: "Use Tool", description: "Integrate with external APIs or services.", icon: <Workflow className="w-8 h-8 text-primary" />, color: "bg-yellow-100 dark:bg-yellow-900/30" },
+    { id: 'conditional', title: "Conditional Logic", description: "Branch the workflow based on conditions.", icon: <Settings2 className="w-8 h-8 text-primary" />, color: "bg-purple-100 dark:bg-purple-900/30" },
 ];
 
+type WorkflowStepType = {
+  id: UniqueIdentifier;
+  type: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+};
+
+function DraggablePaletteItem({ step }: { step: Omit<WorkflowStepType, 'id'> & {id: string} }) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: `palette-${step.id}`,
+    data: { step, isPaletteItem: true }
+  });
+
+  return (
+    <div ref={setNodeRef} style={{ transform: CSS.Translate.toString(transform) }} {...listeners} {...attributes}>
+      <Card className={`p-3 cursor-grab hover:shadow-md transition-shadow ${step.color}`}>
+          <div className="flex flex-col items-center text-center gap-2">
+              {step.icon}
+              <span className="font-semibold text-sm">{step.title}</span>
+              <p className="text-xs text-muted-foreground">{step.description}</p>
+          </div>
+      </Card>
+    </div>
+  );
+}
+
+function SortableWorkflowStep({ step, onRemove }: { step: WorkflowStepType; onRemove: (id: UniqueIdentifier) => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: step.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  
+  return (
+    <div ref={setNodeRef} style={style} className="w-full max-w-sm mx-auto">
+        <Card className="p-4 bg-card relative group">
+          <div {...attributes} {...listeners} className="cursor-grab absolute top-2 left-2 p-2 opacity-50 group-hover:opacity-100 transition-opacity">
+            <GripVertical className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="flex items-center gap-4">
+              <div className={`p-2 rounded-lg ${step.color}`}>{step.icon}</div>
+              <div>
+                  <CardTitle className="text-base">{step.title}</CardTitle>
+                  <CardDescription className="text-sm">{step.description}</CardDescription>
+              </div>
+          </div>
+          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7 opacity-50 group-hover:opacity-100" onClick={() => onRemove(step.id)}>
+              <Plus className="h-4 w-4 rotate-45 text-destructive" />
+          </Button>
+      </Card>
+    </div>
+  );
+}
 
 export default function AgentBuilderPage() {
+  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStepType[]>([]);
+  const [activeStep, setActiveStep] = useState<WorkflowStepType | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const { setNodeRef } = useDroppable({
+    id: 'canvas-droppable',
+  });
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    if (event.active.data.current?.isPaletteItem) {
+        const { step } = event.active.data.current;
+        setActiveStep({ ...step, id: `instance-${Date.now()}` });
+    } else {
+        const activeId = event.active.id;
+        const step = workflowSteps.find(s => s.id === activeId);
+        if(step) setActiveStep(step);
+    }
+  }, [workflowSteps]);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveStep(null);
+    const { active, over } = event;
+
+    if (!over) return;
+
+    // Dropping a new item from palette
+    if (active.data.current?.isPaletteItem) {
+      if (over.id === 'canvas-droppable') {
+        const { step } = active.data.current;
+        setWorkflowSteps(prev => [...prev, { ...step, id: `instance-${Date.now()}` }]);
+      }
+      return;
+    }
+
+    // Reordering items on the canvas
+    const activeId = active.id;
+    const overId = over.id;
+
+    if (activeId !== overId) {
+      setWorkflowSteps((steps) => {
+        const oldIndex = steps.findIndex((s) => s.id === activeId);
+        const newIndex = steps.findIndex((s) => s.id === overId);
+        return arrayMove(steps, oldIndex, newIndex);
+      });
+    }
+  }, []);
+
+  const handleRemoveStep = (id: UniqueIdentifier) => {
+    setWorkflowSteps(prev => prev.filter(s => s.id !== id));
+  };
+
+
   return (
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
     <SidebarProvider defaultOpen={true}>
       <div className="flex h-[calc(100vh-4.1rem)] bg-background text-foreground">
           <Sidebar collapsible="icon" side="left" variant="sidebar" className="group">
@@ -82,25 +211,29 @@ export default function AgentBuilderPage() {
            <div className="bg-card border rounded-lg p-3 mb-4">
                <h2 className="text-lg font-semibold mb-2">AI Steps</h2>
                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {aiSteps.map(step => (
-                       <Card key={step.title} className={`p-3 cursor-grab hover:shadow-md transition-shadow ${step.color}`}>
-                          <div className="flex flex-col items-center text-center gap-2">
-                              {step.icon}
-                              <span className="font-semibold text-sm">{step.title}</span>
-                              <p className="text-xs text-muted-foreground">{step.description}</p>
-                          </div>
-                      </Card>
+                  {aiStepsPalette.map(step => (
+                      <DraggablePaletteItem key={step.id} step={step} />
                   ))}
                </div>
            </div>
 
           {/* Canvas Area */}
-          <div className="flex-1 w-full h-full border-2 border-dashed rounded-lg flex items-center justify-center bg-background">
-              <div className="text-center text-muted-foreground">
-                  <Plus className="mx-auto h-8 w-8" />
-                  <p>Drag AI steps here to build a workflow</p>
-              </div>
-          </div>
+           <div ref={setNodeRef} className="flex-1 w-full h-full border-2 border-dashed rounded-lg flex flex-col items-center justify-start bg-background p-4 space-y-4 overflow-y-auto">
+              {workflowSteps.length > 0 ? (
+                <SortableContext items={workflowSteps.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                  {workflowSteps.map(step => (
+                    <SortableWorkflowStep key={step.id} step={step} onRemove={handleRemoveStep} />
+                  ))}
+                </SortableContext>
+              ) : (
+                <div className="flex-1 flex items-center justify-center pointer-events-none h-full">
+                    <div className="text-center text-muted-foreground">
+                        <Plus className="mx-auto h-8 w-8" />
+                        <p>Drag AI steps here to build a workflow</p>
+                    </div>
+                </div>
+              )}
+            </div>
         </main>
 
         {/* Properties Panel */}
@@ -118,5 +251,18 @@ export default function AgentBuilderPage() {
         </aside>
       </div>
     </SidebarProvider>
+     <DragOverlay>
+        {activeStep ? (
+             <Card className={`p-3 cursor-grabbing shadow-lg ${activeStep.color}`}>
+                <div className="flex flex-col items-center text-center gap-2">
+                    {activeStep.icon}
+                    <span className="font-semibold text-sm">{activeStep.title}</span>
+                </div>
+            </Card>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }
+
+    
