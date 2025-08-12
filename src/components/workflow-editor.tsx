@@ -12,6 +12,7 @@ import ReactFlow, {
   type OnConnect,
   type NodeTypes,
   useReactFlow,
+  ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
