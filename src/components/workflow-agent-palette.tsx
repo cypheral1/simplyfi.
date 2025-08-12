@@ -20,7 +20,7 @@ const agentTypes: { agentType: string; label: string; description: string; icon:
 
 export default function WorkflowAgentPalette() {
 
-    const onDragStart = (event: React.DragEvent, nodeType: string, agent: { agentType: string; label: string; description: string }) => {
+    const onDragStart = (event: React.DragEvent, nodeType: string, agent: { agentType: string; label: string; description: string; }) => {
         const dataForTransfer = {
             agentType: agent.agentType,
             label: agent.label,
