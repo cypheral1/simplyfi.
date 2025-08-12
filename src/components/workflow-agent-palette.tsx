@@ -20,7 +20,12 @@ const agentTypes: { agentType: string; label: string; description: string; icon:
 
 export default function WorkflowAgentPalette() {
 
-    const onDragStart = (event: React.DragEvent, nodeType: string, data: Partial<AgentNodeData>) => {
+    const onDragStart = (event: React.DragEvent, nodeType: string, agentData: { agentType: string; label: string; description: string; }) => {
+        const data = {
+            agentType: agentData.agentType,
+            label: agentData.label,
+            description: agentData.description
+        };
         event.dataTransfer.setData('application/reactflow', nodeType);
         event.dataTransfer.setData('application/json', JSON.stringify(data));
         event.dataTransfer.effectAllowed = 'move';
