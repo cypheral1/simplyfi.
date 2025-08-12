@@ -148,7 +148,6 @@ export default function AgentBuilderPage() {
         const step = workflowSteps.find(s => s.id === activeId);
         if(step) setActiveStep(step);
     }
-    setSelectedStepId(null);
   }, [workflowSteps]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -158,6 +157,7 @@ export default function AgentBuilderPage() {
     if (!over) return;
   
     const isPaletteItem = active.data.current?.isPaletteItem;
+    const activeId = active.id;
   
     if (isPaletteItem) {
       const { step } = active.data.current;
@@ -182,7 +182,6 @@ export default function AgentBuilderPage() {
       return;
     }
   
-    const activeId = active.id;
     const overId = over.id;
   
     if (activeId !== overId) {
@@ -195,6 +194,7 @@ export default function AgentBuilderPage() {
         return steps;
       });
     }
+    setSelectedStepId(activeId);
   }, [workflowSteps]);
   
   const handleRemoveStep = (id: UniqueIdentifier) => {
