@@ -121,45 +121,54 @@ export default function AgentBuilderPage() {
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     setActiveStep(null);
     const { active, over } = event;
-
+  
     if (!over) return;
-
-    // Dropping a new item from palette
-    if (active.data.current?.isPaletteItem) {
+  
+    const isPaletteItem = active.data.current?.isPaletteItem;
+  
+    // Logic for dropping a new item from the palette
+    if (isPaletteItem) {
       const { step } = active.data.current;
       const newStep = { ...step, id: `instance-${Date.now()}` };
-      
+  
       const overId = over.id;
-      if (overId === 'canvas-droppable') {
-          // Dropped on the main canvas, add to the end
+  
+      if (overId === 'canvas-droppable' || workflowSteps.find(s => s.id === overId)) {
+        // If dropped on the canvas or an existing item
+        const overIndex = workflowSteps.findIndex(s => s.id === overId);
+        
+        if (overIndex !== -1) {
+          // Insert at the specific position
+           setWorkflowSteps(prev => {
+            const newSteps = [...prev];
+            newSteps.splice(overIndex, 0, newStep);
+            return newSteps;
+          });
+        } else {
+          // Add to the end if not dropped on a specific item
           setWorkflowSteps(prev => [...prev, newStep]);
-      } else {
-          // Dropped on an existing step, insert it
-          const overIndex = workflowSteps.findIndex(s => s.id === overId);
-          if (overIndex !== -1) {
-              setWorkflowSteps(prev => {
-                  const newSteps = [...prev];
-                  newSteps.splice(overIndex, 0, newStep);
-                  return newSteps;
-              });
-          }
+        }
       }
       return;
     }
-
-    // Reordering items on the canvas
+  
+    // Logic for reordering existing items on the canvas
     const activeId = active.id;
     const overId = over.id;
-
+  
     if (activeId !== overId) {
       setWorkflowSteps((steps) => {
         const oldIndex = steps.findIndex((s) => s.id === activeId);
         const newIndex = steps.findIndex((s) => s.id === overId);
-        return arrayMove(steps, oldIndex, newIndex);
+        // Ensure both items are found before attempting to move
+        if (oldIndex !== -1 && newIndex !== -1) {
+          return arrayMove(steps, oldIndex, newIndex);
+        }
+        return steps;
       });
     }
   }, [workflowSteps]);
-
+  
   const handleRemoveStep = (id: UniqueIdentifier) => {
     setWorkflowSteps(prev => prev.filter(s => s.id !== id));
   };
@@ -232,7 +241,7 @@ export default function AgentBuilderPage() {
            </div>
 
           {/* Canvas Area */}
-           <div ref={setNodeRef} className="flex-1 w-full h-full border-2 border-dashed rounded-lg flex flex-col items-center justify-start bg-background p-4 space-y-4 overflow-y-auto">
+           <div ref={setNodeRef} id="canvas-droppable" className="flex-1 w-full h-full border-2 border-dashed rounded-lg flex flex-col items-center justify-start bg-background p-4 space-y-4 overflow-y-auto">
               {workflowSteps.length > 0 ? (
                 <SortableContext items={workflowSteps.map(s => s.id)} strategy={verticalListSortingStrategy}>
                   {workflowSteps.map(step => (
