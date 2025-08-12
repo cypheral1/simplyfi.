@@ -23,10 +23,6 @@ export default function Header() {
               <LayoutTemplate className="h-5 w-5" />
               <span>UI Builder</span>
             </Link>
-             <Link href="/agent-builder" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
-              <Bot className="h-5 w-5" />
-              <span>Agent Builder</span>
-            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-2">
