@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/form"
 import { useForm } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarGroup, SidebarInset, SidebarFooter } from '@/components/ui/sidebar';
 
 const agentPalette = [
     { id: 'start', title: "Start", description: "The starting point of the workflow", icon: <Play className="w-5 h-5 text-green-500" />, color: 'bg-green-500/10' },
@@ -247,7 +248,7 @@ export default function AgentBuilderPage() {
             }
             
             // Fallback for safety, though should be covered by above cases
-            return prev;
+            return [...prev, activeAgent];
         });
         setSelectedAgentId(activeAgent.id);
         return;
@@ -270,7 +271,7 @@ export default function AgentBuilderPage() {
         return agents;
       });
     }
-  }, [activeAgent, workflowAgents]);
+  }, [activeAgent]);
   
   if (!isClient) {
     return (
@@ -283,70 +284,77 @@ export default function AgentBuilderPage() {
   const selectedAgent = workflowAgents.find(a => a.id === selectedAgentId) || null;
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
-      <div className="flex h-[calc(100vh-4.1rem)] bg-background text-foreground">
-        {/* Left Panel */}
-        <aside className="w-[400px] border-r p-4 space-y-6 bg-card overflow-y-auto">
-            <div>
-                <div className="flex items-center gap-2 mb-2">
-                    <Play className="w-5 h-5 text-primary" />
-                    <h2 className="text-lg font-semibold">AI Agent Steps</h2>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">Drag steps onto the canvas to build your workflow.</p>
-                <div className="grid grid-cols-2 gap-2">
-                    {agentPalette.map(step => (
-                        <DraggablePaletteItem key={step.id} step={step} />
-                    ))}
-                </div>
-            </div>
-            <div className="border-t -mx-4"></div>
-             <PropertiesPanel agent={selectedAgent} onUpdate={handleUpdateAgent} />
-        </aside>
-        
-        {/* Center Canvas */}
-        <main ref={setDroppableRef} id="canvas-droppable" className="flex-1 p-8 bg-dotted-pattern flex flex-col items-center overflow-y-auto">
-            <div className="w-full max-w-sm py-4 space-y-6">
-                 {workflowAgents.length > 0 ? (
-                    <SortableContext items={workflowAgents.map(a => a.id)} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-4">
-                      {workflowAgents.map(agent => (
-                        <SortableAgent 
-                            key={agent.id} 
-                            agent={agent} 
-                            isSelected={selectedAgentId === agent.id}
-                            onSelect={handleSelectAgent}
-                            onRemove={handleRemoveAgent}
-                        />
-                      ))}
+    <SidebarProvider defaultOpen={true}>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
+        <div className="flex h-[calc(100vh-4.1rem)] bg-background text-foreground">
+            <Sidebar>
+                <SidebarHeader>
+                    <div className="flex items-center justify-between p-2">
+                        <CardTitle>AI Agents</CardTitle>
+                        <SidebarTrigger />
                     </div>
-                    </SortableContext>
-                 ) : (
-                    <div className="flex-1 flex items-center justify-center h-full mt-40">
-                       <div className="text-center p-8 border-2 border-dashed rounded-xl">
-                          <Bot className="mx-auto h-12 w-12 text-muted-foreground" />
-                          <p className="mt-4 text-muted-foreground">Drag agent steps here to start</p>
-                       </div>
-                    </div>
-                 )}
-            </div>
-        </main>
-      </div>
-     <DragOverlay>
-        {activeAgent ? (
-             <Card className={cn("p-4 bg-card shadow-xl cursor-grabbing w-full max-w-sm", activeAgent.color)}>
-                 <div className="flex items-center gap-4">
-                    <div className="p-2 cursor-grab text-muted-foreground"><GripVertical className="w-5 h-5" /></div>
-                    <div className="p-2 bg-muted rounded-md">{activeAgent.icon}</div>
-                    <div>
-                        <CardTitle className="text-sm font-medium">{activeAgent.title}</CardTitle>
-                        <CardDescription className="text-xs">{activeAgent.description}</CardDescription>
-                    </div>
+                </SidebarHeader>
+                <SidebarContent>
+                    <SidebarGroup>
+                        <div className="grid grid-cols-2 gap-2">
+                            {agentPalette.map(step => (
+                                <DraggablePaletteItem key={step.id} step={step} />
+                            ))}
+                        </div>
+                    </SidebarGroup>
+                </SidebarContent>
+            </Sidebar>
+          
+          {/* Center Canvas */}
+          <SidebarInset className="flex-1">
+            <main ref={setDroppableRef} id="canvas-droppable" className="flex-1 p-8 bg-dotted-pattern flex flex-col items-center overflow-y-auto h-full">
+                <div className="w-full max-w-sm py-4 space-y-6">
+                     {workflowAgents.length > 0 ? (
+                        <SortableContext items={workflowAgents.map(a => a.id)} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-4">
+                          {workflowAgents.map(agent => (
+                            <SortableAgent 
+                                key={agent.id} 
+                                agent={agent} 
+                                isSelected={selectedAgentId === agent.id}
+                                onSelect={handleSelectAgent}
+                                onRemove={handleRemoveAgent}
+                            />
+                          ))}
+                        </div>
+                        </SortableContext>
+                     ) : (
+                        <div className="flex-1 flex items-center justify-center h-full mt-40">
+                           <div className="text-center p-8 border-2 border-dashed rounded-xl">
+                              <Bot className="mx-auto h-12 w-12 text-muted-foreground" />
+                              <p className="mt-4 text-muted-foreground">Drag agent steps here to start</p>
+                           </div>
+                        </div>
+                     )}
                 </div>
-            </Card>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+            </main>
+          </SidebarInset>
+          
+           {/* Right Panel */}
+           <aside className="w-[400px] border-l p-4 space-y-6 bg-card overflow-y-auto">
+               <PropertiesPanel agent={selectedAgent} onUpdate={handleUpdateAgent} />
+          </aside>
+        </div>
+       <DragOverlay>
+          {activeAgent ? (
+               <Card className={cn("p-4 bg-card shadow-xl cursor-grabbing w-full max-w-sm", activeAgent.color)}>
+                   <div className="flex items-center gap-4">
+                      <div className="p-2 cursor-grab text-muted-foreground"><GripVertical className="w-5 h-5" /></div>
+                      <div className="p-2 bg-muted rounded-md">{activeAgent.icon}</div>
+                      <div>
+                          <CardTitle className="text-sm font-medium">{activeAgent.title}</CardTitle>
+                          <CardDescription className="text-xs">{activeAgent.description}</CardDescription>
+                      </div>
+                  </div>
+              </Card>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </SidebarProvider>
   );
 }
-
-    
