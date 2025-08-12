@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useCallback, useMemo, useState } from 'react';
@@ -36,11 +37,15 @@ function WorkflowEditorComponent() {
             event.preventDefault();
 
             const type = event.dataTransfer.getData('application/reactflow');
-            const data = JSON.parse(event.dataTransfer.getData('application/json'));
+            const dataString = event.dataTransfer.getData('application/json');
 
-            if (typeof type === 'undefined' || !type || !data) {
+            if (typeof type === 'undefined' || !type || !dataString) {
                 return;
             }
+            
+            const data = JSON.parse(dataString);
+
+            if (!reactFlowInstance) return;
 
             const position = reactFlowInstance.screenToFlowPosition({
                 x: event.clientX,
