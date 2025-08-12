@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useTransition, useRef, useEffect } from 'react';
@@ -5,10 +6,8 @@ import { conversationalCodeGenerationAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Send, User, Bot, Loader2, Code, Brush, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useChatStore, type Message } from '@/stores/chat-store';
 
@@ -25,6 +24,7 @@ export default function ChatInterface() {
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -33,6 +33,13 @@ export default function ChatInterface() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isGenerating]);
+  
+  useEffect(() => {
+    if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [input]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,22 +131,29 @@ export default function ChatInterface() {
             <div ref={messagesEndRef} />
         </ScrollArea>
        </div>
-      <div className="border-t p-4">
-        <form onSubmit={handleSubmit} className="relative">
-            <Textarea
+       <div className="px-4 pb-4 pt-2">
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask me to generate some code..."
-            className="flex-1 resize-none pr-16"
-            rows={2}
+            className="w-full min-h-[44px] max-h-48 resize-none rounded-xl border border-input bg-transparent py-3 pl-4 pr-14 text-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+            rows={1}
             disabled={isGenerating}
-            />
-            <Button type="submit" size="icon" disabled={!input.trim() || isGenerating} className="absolute bottom-2.5 right-2.5">
+          />
+          <Button
+            type="submit"
+            size="icon"
+            onClick={handleSubmit}
+            disabled={!input.trim() || isGenerating}
+            className="absolute bottom-2 right-2 h-8 w-8 rounded-lg"
+          >
             <Send className="h-4 w-4" />
-            </Button>
-        </form>
-      </div>
+          </Button>
+        </div>
+       </div>
     </div>
   );
 }
