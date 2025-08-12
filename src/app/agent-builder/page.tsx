@@ -5,25 +5,32 @@ import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Code, Bot, Wand2, FileText, Play, GripVertical, Trash2 } from "lucide-react";
-import { Textarea } from '@/components/ui/textarea';
-import { DndContext, useDraggable, useDroppable, DragEndEvent, DragOverlay, UniqueIdentifier, closestCenter, PointerSensor, useSensor, useSensors, DragStartEvent } from '@dnd-kit/core';
+import {
+  DndContext,
+  useDraggable,
+  useDroppable,
+  DragEndEvent,
+  DragOverlay,
+  UniqueIdentifier,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragStartEvent,
+} from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Input } from '@/components/ui/input';
-
 
 const agentPalette = [
     { id: 'start', title: "Start", description: "The starting point of the workflow", icon: <Play className="w-5 h-5 text-green-500" />, color: 'bg-green-500/10' },
@@ -48,22 +55,6 @@ const initialProps: { [key: string]: any } = {
   tool: { name: 'getWeather' },
   condition: { condition: 'if (x > 10)' },
 };
-
-const formSchemas: { [key: string]: z.ZodObject<any> } = {
-  start: z.object({
-    prompt: z.string().min(1, "Starting prompt is required."),
-  }),
-  prompt: z.object({
-    prompt: z.string().min(1, "Prompt is required."),
-  }),
-  tool: z.object({
-    name: z.string().min(1, "Tool name is required."),
-  }),
-  condition: z.object({
-    condition: z.string().min(1, "Condition is required."),
-  }),
-};
-
 
 function DraggablePaletteItem({ step }: { step: Omit<Agent, 'id' | 'props'> & {id: string} }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -148,9 +139,6 @@ function PropertiesPanel({ agent, onUpdate }: { agent: Agent | null, onUpdate: (
         );
     }
     
-    const FormSchema = formSchemas[agent.type];
-    if(!FormSchema) return <p>No form for this agent type</p>
-
     const onSubmit = (data: any) => {
         onUpdate(agent.id, data);
     };
@@ -164,7 +152,7 @@ function PropertiesPanel({ agent, onUpdate }: { agent: Agent | null, onUpdate: (
             <CardContent>
                 <Form {...form}>
                     <form onBlur={form.handleSubmit(onSubmit)} className="space-y-6">
-                       {Object.keys(initialProps[agent.type]).map(propName => (
+                       {Object.keys(initialProps[agent.type] || {}).map(propName => (
                            <FormField
                                 key={propName}
                                 control={form.control}
@@ -241,36 +229,31 @@ export default function AgentBuilderPage() {
   
     const isPaletteItem = active.data.current?.isPaletteItem;
   
+    // Handle dropping a new item from the palette
     if (isPaletteItem && activeAgent) {
-        const overId = over.id;
-        const isDroppingOnCanvas = overId === 'canvas-droppable';
-        const overAgentIndex = workflowAgents.findIndex(a => a.id === overId);
-
         setWorkflowAgents(prev => {
+            const overId = over.id;
+            // Case 1: Dropping on the main canvas (empty or not)
+            if (overId === 'canvas-droppable') {
+                return [...prev, activeAgent];
+            }
+
+            // Case 2: Dropping over an existing agent on the canvas
+            const overAgentIndex = prev.findIndex(a => a.id === overId);
             if (overAgentIndex !== -1) {
                 const newAgents = [...prev];
                 newAgents.splice(overAgentIndex, 0, activeAgent);
                 return newAgents;
             }
-            if (isDroppingOnCanvas) {
-                return [...prev, activeAgent];
-            }
-            // If dropping on a child of canvas, find its index
-            const parent = (over.data.current as any)?.sortable?.containerId;
-            if(parent === 'canvas-droppable') {
-                 const newAgents = [...prev];
-                 const idx = newAgents.findIndex(a => a.id === overId);
-                 if(idx !== -1) {
-                    newAgents.splice(idx, 0, activeAgent);
-                    return newAgents;
-                 }
-            }
-            return [...prev, activeAgent];
+            
+            // Fallback for safety, though should be covered by above cases
+            return prev;
         });
         setSelectedAgentId(activeAgent.id);
         return;
     }
   
+    // Handle reordering an existing item on the canvas
     const activeId = active.id;
     const overId = over.id;
   
@@ -286,9 +269,6 @@ export default function AgentBuilderPage() {
         }
         return agents;
       });
-    } else {
-         // clicked on an item without dragging
-         setSelectedAgentId(activeId);
     }
   }, [activeAgent, workflowAgents]);
   
