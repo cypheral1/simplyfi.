@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { DndContext, useDraggable, useDroppable, DragEndEvent, DragOverlay, UniqueIdentifier, closestCenter, PointerSensor, useSensor, useSensors, DragStartEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { cn } from '@/lib/utils';
 
 const agentPalette = [
     { id: 'code-generator', title: "Code Generator", description: "Generates code from a prompt.", icon: <Code className="w-5 h-5" />, type: 'agent' },
@@ -98,7 +97,7 @@ export default function AgentBuilderPage() {
     })
   );
 
-  const { setNodeRef } = useDroppable({
+  const { setNodeRef: setDroppableRef } = useDroppable({
     id: 'canvas-droppable',
   });
 
@@ -120,16 +119,15 @@ export default function AgentBuilderPage() {
     if (!over) return;
   
     const isPaletteItem = active.data.current?.isPaletteItem;
-    const activeId = active.id;
   
     if (isPaletteItem) {
-      const { agent } = active.data.current;
-      const newAgent = { ...agent, id: `instance-${Date.now()}` };
-      const overId = over.id;
-  
-      if (overId === 'canvas-droppable' || workflowAgents.find(a => a.id === overId)) {
-        const overIndex = workflowAgents.findIndex(a => a.id === overId);
+      if (over.id === 'canvas-droppable' || findParent(over.id) === 'canvas-droppable') {
+        const { agent } = active.data.current;
+        const newAgent: Agent = { ...agent, id: `instance-${Date.now()}` };
         
+        const overId = over.id;
+        const overIndex = workflowAgents.findIndex(a => a.id === overId);
+
         if (overIndex !== -1) {
            setWorkflowAgents(prev => {
             const newAgents = [...prev];
@@ -143,6 +141,7 @@ export default function AgentBuilderPage() {
       return;
     }
   
+    const activeId = active.id;
     const overId = over.id;
   
     if (activeId !== overId) {
@@ -156,6 +155,17 @@ export default function AgentBuilderPage() {
       });
     }
   }, [workflowAgents]);
+
+  const findParent = (id: UniqueIdentifier) => {
+    if (id === 'canvas-droppable') {
+      return 'canvas-droppable';
+    }
+    const agent = workflowAgents.find(a => a.id === id);
+    if (agent) {
+      return 'canvas-droppable';
+    }
+    return null;
+  }
   
   if (!isClient) {
     return (
@@ -196,7 +206,7 @@ export default function AgentBuilderPage() {
            </div>
         </aside>
         
-        <main ref={setNodeRef} id="canvas-droppable" className="flex-1 p-4 bg-dotted-pattern flex flex-col items-center justify-between">
+        <main ref={setDroppableRef} id="canvas-droppable" className="flex-1 p-4 bg-dotted-pattern flex flex-col items-center justify-between">
             <Card className="p-3 bg-card shadow-md">
                 <CardTitle className="text-base">Start</CardTitle>
             </Card>
@@ -210,7 +220,11 @@ export default function AgentBuilderPage() {
                       ))}
                     </div>
                     </SortableContext>
-                 ) : null}
+                 ) : (
+                    <div className="flex-1 flex items-center justify-center h-full">
+                       <p className="text-muted-foreground">Drop agents here</p>
+                    </div>
+                 )}
             </div>
             
             <Card className="p-3 bg-card shadow-md">
