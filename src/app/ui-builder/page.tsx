@@ -23,7 +23,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, Code, Download, Plus, AlertTriangle, SeparatorHorizontal, Badge as BadgeIcon } from 'lucide-react';
+import { GripVertical, Trash2, Code, Download, Plus, AlertTriangle, SeparatorHorizontal, Badge as BadgeIcon, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -38,6 +38,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import Image from 'next/image';
 
 
 // Component Definitions
@@ -59,6 +60,7 @@ const availableComponents = [
   { id: 'progress', name: 'Progress', icon: () => <div className="w-16 h-2 rounded-full bg-primary/50 pointer-events-none" /> },
   { id: 'separator', name: 'Separator', icon: () => <SeparatorHorizontal className="w-5 h-5 text-muted-foreground" /> },
   { id: 'tabs', name: 'Tabs', icon: () => <div className="pointer-events-none border rounded-md p-1 text-xs">Tabs</div> },
+  { id: 'image', name: 'Image', icon: () => <ImageIcon className="w-5 h-5 text-muted-foreground" /> },
 ];
 
 type Component = {
@@ -67,6 +69,100 @@ type Component = {
   name: string;
   props: { [key: string]: any };
   children?: Component[];
+};
+
+const findComponent = (components: Component[], id: UniqueIdentifier | null): Component | null => {
+    if (!id) return null;
+    for (const component of components) {
+        if (component.id === id) return component;
+        if (component.children) {
+            const found = findComponent(component.children, id);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
+const findParent = (components: Component[], id: UniqueIdentifier): Component | null => {
+    for (const component of components) {
+        if (component.children?.some(c => c.id === id)) return component;
+        if (component.children) {
+            const found = findParent(component.children, id);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
+const addComponent = (components: Component[], newComponent: Component, parentId: UniqueIdentifier | null, overId?: UniqueIdentifier | null): Component[] => {
+    if (parentId === null) {
+        if (overId) {
+          const overIndex = components.findIndex(c => c.id === overId);
+          if (overIndex !== -1) {
+            return [...components.slice(0, overIndex), newComponent, ...components.slice(overIndex)];
+          }
+        }
+        return [...components, newComponent];
+    }
+    return components.map(c => {
+        if (c.id === parentId) {
+            const children = c.children || [];
+             if (overId) {
+              const overIndex = children.findIndex(child => child.id === overId);
+               if (overIndex !== -1) {
+                  return {...c, children: [...children.slice(0, overIndex), newComponent, ...children.slice(overIndex)]};
+              }
+            }
+            return { ...c, children: [...children, newComponent] };
+        }
+        if (c.children) {
+            return { ...c, children: addComponent(c.children, newComponent, parentId, overId) };
+        }
+        return c;
+    });
+}
+
+const removeComponent = (components: Component[], id: UniqueIdentifier): Component[] => {
+  return components.reduce((acc, comp) => {
+      if (comp.id === id) return acc;
+      if (comp.children) {
+          comp.children = removeComponent(comp.children, id);
+      }
+      acc.push(comp);
+      return acc;
+  }, [] as Component[]);
+}
+
+const moveComponent = (components: Component[], activeId: UniqueIdentifier, overId: UniqueIdentifier): Component[] => {
+    const activeComponent = findComponent(components, activeId);
+    if (!activeComponent) return components;
+    
+    const overParent = findParent(components, overId);
+    
+    // Remove from old position
+    let tempComponents = removeComponent(components, activeId);
+    
+    // Add to new position
+    if (overParent) { // Dropping into a container from somewhere else
+        const overIndex = overParent.children!.findIndex(c => c.id === overId);
+        return tempComponents.map(c => {
+            if (c.id === overParent.id) {
+                const newChildren = [...(c.children || [])];
+                newChildren.splice(overIndex, 0, activeComponent);
+                return {...c, children: newChildren};
+            }
+            if (c.children) {
+                return {...c, children: moveComponent(c.children, activeId, overId)};
+            }
+            return c;
+        });
+    }
+    
+    const overIndex = tempComponents.findIndex(c => c.id === overId);
+    if (overIndex !== -1) { // Dropping at root level
+        tempComponents.splice(overIndex, 0, activeComponent);
+    }
+    return tempComponents;
 };
 
 const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
@@ -145,6 +241,7 @@ const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
         ))}
     </Tabs>
   ),
+  image: (props) => <Image src={props.src} alt={props.alt} width={props.width} height={props.height} className={props.className} />,
 };
 
 const initialProps: { [key: string]: any } = {
@@ -165,6 +262,7 @@ const initialProps: { [key: string]: any } = {
     progress: { value: 45 },
     separator: {},
     tabs: { tabs: ['Details', 'Settings'], defaultValue: 'details' },
+    image: { src: 'https://placehold.co/300x200.png', alt: 'Placeholder', width: 300, height: 200, className: 'rounded-md' },
 }
 
 function DraggableComponent({ id, name, icon }: { id: string, name: string, icon: () => React.ReactNode }) {
@@ -365,7 +463,7 @@ function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedCompone
             )
         }
         
-        if (type === 'string' && propValue.length > 30 || propName === 'className') {
+        if (type === 'string' && propValue.length > 30 || propName === 'className' || propName === 'src') {
             return (
                 <div key={key} className="space-y-2">
                     <Label htmlFor={key} className="capitalize">{propName}</Label>
@@ -413,6 +511,7 @@ function generateJsx(components: Component[], level = 0): string {
         progress: ['Progress'],
         separator: ['Separator'],
         tabs: ['Tabs', 'TabsContent', 'TabsList', 'TabsTrigger'],
+        image: ['Image'],
     };
 
     const componentCode = components.map(component => {
@@ -466,6 +565,8 @@ function generateJsx(components: Component[], level = 0): string {
                 return `${indent}<Tabs defaultValue="${props.defaultValue || (props.tabs[0] || 'tab1').toLowerCase().replace(/\s+/g, '-')}" className="w-full">\n${indent}  <TabsList>\n${indent}    ${(props.tabs || []).map((tab: string) => `<TabsTrigger value="${tab.toLowerCase().replace(/\s+/g, '-')}">${tab}</TabsTrigger>`).join(`\n${indent}    `)}\n${indent}  </TabsList>\n${indent}  ${(props.tabs || []).map((tab: string, i:number) => `<TabsContent value="${tab.toLowerCase().replace(/\s+/g, '-')}">\n${generateJsx(children?.[i]?.children || [], level + 2)}\n${indent}  </TabsContent>`).join(`\n${indent}  `)}\n${indent}</Tabs>`;
             case 'container':
                  return `${indent}<div ${propsString ? `className="${props.className}"` : ''}>\n${generateJsx(children || [], level + 1)}\n${indent}</div>`
+            case 'image':
+                 return `${indent}<Image src="${props.src}" alt="${props.alt}" width={${props.width}} height={${props.height}} className="${props.className}" />`
             default:
                  return `${indent}<${Comp} ${propsString}>${props.children || ''}</${Comp}>`;
         }
@@ -505,6 +606,7 @@ function generateJsx(components: Component[], level = 0): string {
           else if (['Separator'].includes(imp)) path = '@/components/ui/separator';
           else if (['Tabs', 'TabsContent', 'TabsList', 'TabsTrigger'].includes(imp)) path = '@/components/ui/tabs';
           else if (['AlertTriangle'].includes(imp)) path = 'lucide-react';
+          else if (['Image'].includes(imp)) path = 'next/image';
           else return;
 
           if (!importGroups[path]) {
@@ -638,98 +740,6 @@ export default function UiBuilderPage() {
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  const findComponent = (components: Component[], id: UniqueIdentifier | null): Component | null => {
-      if (!id) return null;
-      for (const component of components) {
-          if (component.id === id) return component;
-          if (component.children) {
-              const found = findComponent(component.children, id);
-              if (found) return found;
-          }
-      }
-      return null;
-  }
-  
-  const findParent = (components: Component[], id: UniqueIdentifier): Component | null => {
-      for (const component of components) {
-          if (component.children?.some(c => c.id === id)) return component;
-          if (component.children) {
-              const found = findParent(component.children, id);
-              if (found) return found;
-          }
-      }
-      return null;
-  }
-
-  const addComponent = (components: Component[], newComponent: Component, parentId: UniqueIdentifier | null, overId?: UniqueIdentifier | null): Component[] => {
-      if (parentId === null) {
-          if (overId) {
-            const overIndex = components.findIndex(c => c.id === overId);
-            if (overIndex !== -1) {
-              return [...components.slice(0, overIndex), newComponent, ...components.slice(overIndex)];
-            }
-          }
-          return [...components, newComponent];
-      }
-      return components.map(c => {
-          if (c.id === parentId) {
-              const children = c.children || [];
-               if (overId) {
-                const overIndex = children.findIndex(child => child.id === overId);
-                 if (overIndex !== -1) {
-                    return {...c, children: [...children.slice(0, overIndex), newComponent, ...children.slice(overIndex)]};
-                }
-              }
-              return { ...c, children: [...children, newComponent] };
-          }
-          if (c.children) {
-              return { ...c, children: addComponent(c.children, newComponent, parentId, overId) };
-          }
-          return c;
-      });
-  }
-  
-  const removeComponent = (components: Component[], id: UniqueIdentifier): Component[] => {
-    return components.reduce((acc, comp) => {
-        if (comp.id === id) return acc;
-        if (comp.children) {
-            comp.children = removeComponent(comp.children, id);
-        }
-        acc.push(comp);
-        return acc;
-    }, [] as Component[]);
-  }
-  
-  const moveComponent = (components: Component[], activeId: UniqueIdentifier, overId: UniqueIdentifier): Component[] => {
-      const activeComponent = findComponent(components, activeId);
-      if (!activeComponent) return components;
-      
-      const overParent = findParent(components, overId);
-      const activeParent = findParent(components, activeId);
-      
-      // Remove from old position
-      let tempComponents = removeComponent(components, activeId);
-      
-      // Add to new position
-      if (overParent) { // Dropping into a container from somewhere else
-          const overIndex = overParent.children!.findIndex(c => c.id === overId);
-          return tempComponents.map(c => {
-              if (c.id === overParent.id) {
-                  const newChildren = [...(c.children || [])];
-                  newChildren.splice(overIndex, 0, activeComponent);
-                  return {...c, children: newChildren};
-              }
-              return c;
-          });
-      }
-      
-      const overIndex = tempComponents.findIndex(c => c.id === overId);
-      if (overIndex !== -1) { // Dropping at root level
-          tempComponents.splice(overIndex, 0, activeComponent);
-      }
-      return tempComponents;
-  };
     
   useEffect(() => {
     // Expose functions to window for SortableComponent to call from potentially deeply nested components
@@ -783,17 +793,16 @@ export default function UiBuilderPage() {
     if (activeId === overId) return;
 
     setCanvasComponents(prev => {
-        const activeComponent = findComponent(prev, activeId);
-        if(!activeComponent) return prev;
+        const activeItem = findComponent(prev, activeId);
+        if(!activeItem) return prev; // This can happen if dragging from palette
         
-        const overComponent = findComponent(prev, overId);
+        const overItem = findComponent(prev, overId);
 
-        if (overComponent && overComponent.type === 'container' && overComponent.id !== findParent(prev, activeId)?.id) {
+        if (overItem && (overItem.type === 'container' || overItem.type === 'tabs') && overItem.id !== findParent(prev, activeId)?.id) {
              const withoutActive = removeComponent(prev, activeId);
-             return addComponent(withoutActive, activeComponent, overComponent.id);
+             return addComponent(withoutActive, activeItem, overItem.id);
         }
         
-        // This is simplified, real logic would need arrayMove and handling nested structures
         const activeParent = findParent(prev, activeId);
         const overParent = findParent(prev, overId);
         
@@ -812,6 +821,12 @@ export default function UiBuilderPage() {
                  const overIndex = prev.findIndex(c => c.id === overId);
                  return arrayMove(prev, activeIndex, overIndex);
             }
+        } else if (activeParent && !overParent && !overItem) { // move from container to root
+            const temp = removeComponent(prev, activeId);
+            return addComponent(temp, activeItem, null);
+        } else if (!activeParent && overParent) { // move from root to container
+             const temp = removeComponent(prev, activeId);
+             return addComponent(temp, activeItem, overParent.id, overId)
         }
         
         return prev;
@@ -850,10 +865,40 @@ export default function UiBuilderPage() {
     }
     
     if (activeId !== overId) {
-        setCanvasComponents((items) => {
-            const activeIndex = items.findIndex((item) => item.id === activeId);
-            const overIndex = items.findIndex((item) => item.id === overId);
-            return arrayMove(items, activeIndex, overIndex);
+       setCanvasComponents((prev) => {
+            const activeParent = findParent(prev, activeId);
+            const overParent = findParent(prev, overId);
+
+            if (activeParent?.id === overParent?.id) {
+                if (activeParent) { // Reorder in same container
+                    return prev.map(c => {
+                        if (c.id === activeParent.id) {
+                            const activeIndex = c.children!.findIndex(child => child.id === activeId);
+                            const overIndex = c.children!.findIndex(child => child.id === overId);
+                            return {...c, children: arrayMove(c.children!, activeIndex, overIndex)};
+                        }
+                        return c;
+                    });
+                } else { // Reorder at root
+                    const activeIndex = prev.findIndex(item => item.id === activeId);
+                    const overIndex = prev.findIndex(item => item.id === overId);
+                    return arrayMove(prev, activeIndex, overIndex);
+                }
+            }
+            
+            // Handle moving between containers or to/from root
+            const activeItem = findComponent(prev, activeId);
+            if (activeItem) {
+                const temp = removeComponent(prev, activeId);
+                const newParent = findParent(temp, overId);
+                const overComp = findComponent(temp, overId);
+                if (overComp && (overComp.type === 'container' || overComp.type === 'tabs')) {
+                    return addComponent(temp, activeItem, overId);
+                }
+                return addComponent(temp, activeItem, newParent ? newParent.id : null, overId);
+            }
+
+            return prev;
         });
     }
     
@@ -922,7 +967,7 @@ export default function UiBuilderPage() {
 
         {/* Canvas Area */}
         <main className="flex-1 p-4 bg-muted/20 overflow-y-auto" onClick={handleDeselect}>
-            <DroppableContainer id="canvas-droppable" items={canvasComponents} onSelect={handleDeselect} isSelected={selectedComponentId === 'canvas-droppable'}/>
+            <DroppableContainer id="canvas-droppable" items={canvasComponents} onSelect={handleDeselect} isSelected={selectedComponentId === null}/>
         </main>
 
         {/* Properties Panel */}
