@@ -284,7 +284,7 @@ export default function AgentBuilderPage() {
   const selectedAgent = workflowAgents.find(a => a.id === selectedAgentId) || null;
 
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider>
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
         <div className="flex h-[calc(100vh-4.1rem)] bg-background text-foreground">
             <Sidebar>
@@ -358,3 +358,5 @@ export default function AgentBuilderPage() {
     </SidebarProvider>
   );
 }
+
+    
