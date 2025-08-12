@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import {
   type Connection,
@@ -14,6 +13,11 @@ import {
   applyEdgeChanges,
 } from 'reactflow';
 import type { AgentNodeData } from '@/lib/types';
+
+const initialNodes: Node<AgentNodeData>[] = [
+    { id: 'start', type: 'start', position: { x: 350, y: 50 }, data: { label: 'Start' } },
+    { id: 'end', type: 'end', position: { x: 350, y: 400 }, data: { label: 'End' } },
+];
 
 type WorkflowState = {
   nodes: Node<AgentNodeData>[];
@@ -36,7 +40,7 @@ type WorkflowActions = {
 };
 
 const useWorkflowStore = create<WorkflowState & WorkflowActions>((set, get) => ({
-  nodes: [],
+  nodes: initialNodes,
   edges: [],
   prompt: '',
   selectedNode: null,
@@ -77,7 +81,11 @@ const useWorkflowStore = create<WorkflowState & WorkflowActions>((set, get) => (
   setSelectedNode: (nodeId: string | null) => {
     const nodes = get().nodes;
     const node = nodes.find(n => n.id === nodeId) || null;
-    set({ selectedNode: node });
+    if (node?.type === 'start' || node?.type === 'end') {
+      set({ selectedNode: null });
+    } else {
+      set({ selectedNode: node });
+    }
   },
   setNodeStatus: (nodeId: string, status: 'running' | 'success' | 'error') => {
       set({

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useCallback, useMemo } from 'react';
@@ -18,6 +17,8 @@ import 'reactflow/dist/style.css';
 
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { AgentNode } from './agent-node';
+import { StartNode } from './StartNode';
+import { EndNode } from './EndNode';
 import type { AgentNodeData } from '@/lib/types';
 
 function WorkflowEditorComponent() {
@@ -25,7 +26,9 @@ function WorkflowEditorComponent() {
     const { screenToFlowPosition } = useReactFlow();
 
     const nodeTypes: NodeTypes = useMemo(() => ({ 
-        agent: AgentNode 
+        agent: AgentNode,
+        start: StartNode,
+        end: EndNode,
     }), []);
 
     const onDragOver = useCallback((event: React.DragEvent) => {
@@ -52,7 +55,7 @@ function WorkflowEditorComponent() {
             });
             
             const newNode: Node<AgentNodeData> = {
-                id: `${data.agentType}-${Date.now()}`,
+                id: `${data.agentType || data.type}-${Date.now()}`,
                 type,
                 position,
                 data

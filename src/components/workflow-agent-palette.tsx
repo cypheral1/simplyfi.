@@ -1,9 +1,13 @@
-
 "use client";
 
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { Bot, FileCode, Palette, Search, GitCommit, TestTube, Waypoints, Replace, ScanText, Image } from "lucide-react";
+import { Bot, FileCode, Palette, Search, GitCommit, TestTube, Waypoints, Replace, ScanText, Image, PlayCircle, StopCircle } from "lucide-react";
+
+const nodeTypes = [
+    { nodeType: 'start', type: 'start', label: 'Start', description: 'The starting point of the workflow.', icon: <PlayCircle /> },
+    { nodeType: 'end', type: 'end', label: 'End', description: 'The ending point of the workflow.', icon: <StopCircle /> },
+];
 
 const agentTypes = [
     { agentType: 'code', label: 'Code Generator', description: 'Generates code from a prompt.', icon: <FileCode /> },
@@ -20,21 +24,46 @@ const agentTypes = [
 
 export default function WorkflowAgentPalette() {
 
-    const onDragStart = (event: React.DragEvent, nodeType: string, agent: Omit<typeof agentTypes[0], 'icon'>) => {
-        const dataForTransfer = {
-            agentType: agent.agentType,
-            label: agent.label,
-            description: agent.description,
-        };
+    const onDragStart = (event: React.DragEvent, nodeType: string, data: any) => {
+        const transferData = { ...data };
+        delete transferData.icon;
+
         event.dataTransfer.setData('application/reactflow', nodeType);
-        event.dataTransfer.setData('application/json', JSON.stringify(dataForTransfer));
+        event.dataTransfer.setData('application/json', JSON.stringify(transferData));
         event.dataTransfer.effectAllowed = 'move';
     };
 
     return (
         <div className="space-y-3">
+            {nodeTypes.map(node => {
+                 const serializableData = {
+                    type: node.type,
+                    label: node.label,
+                    description: node.description,
+                 }
+                 return (
+                     <Card 
+                        key={node.type} 
+                        className="p-3 cursor-grab hover:shadow-md hover:border-primary/50 transition-all"
+                        draggable
+                        onDragStart={(event) => onDragStart(event, node.type, serializableData)}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="bg-primary/10 text-primary p-2 rounded-md">
+                                {node.icon}
+                            </div>
+                            <div>
+                                <p className="font-semibold text-sm">{node.label}</p>
+                                <p className="text-xs text-muted-foreground">{node.description}</p>
+                            </div>
+                        </div>
+                     </Card>
+                )
+            })}
+
+            <hr className="my-4" />
+
             {agentTypes.map(agent => {
-                 // Create a serializable version of the agent data, excluding the icon
                  const serializableAgent = {
                     agentType: agent.agentType,
                     label: agent.label,

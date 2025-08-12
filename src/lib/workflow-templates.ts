@@ -1,4 +1,3 @@
-
 import type { Node, Edge } from 'reactflow';
 import type { AgentNodeData } from './types';
 
@@ -8,13 +7,17 @@ export const workflowTemplates: { name: string; description: string; workflow: {
         description: 'A simple workflow to generate, review, and test code.',
         workflow: {
             nodes: [
-                { id: '1', type: 'agent', position: { x: 250, y: 50 }, data: { agentType: 'code', label: 'Code Generator', description: 'Generates code from a prompt.' } },
-                { id: '2', type: 'agent', position: { x: 250, y: 250 }, data: { agentType: 'review', label: 'Code Reviewer', description: 'Reviews a piece of code.' } },
-                { id: '3', type: 'agent', position: { x: 250, y: 450 }, data: { agentType: 'test', label: 'Test Generator', description: 'Generates unit tests for code.' } },
+                { id: 'start', type: 'start', position: { x: 350, y: 25 }, data: { label: 'Start' } },
+                { id: 'code-gen', type: 'agent', position: { x: 250, y: 150 }, data: { agentType: 'code', label: 'Code Generator', description: 'Generates code from a prompt.' } },
+                { id: 'review', type: 'agent', position: { x: 250, y: 350 }, data: { agentType: 'review', label: 'Code Reviewer', description: 'Reviews a piece of code.' } },
+                { id: 'test-gen', type: 'agent', position: { x: 250, y: 550 }, data: { agentType: 'test', label: 'Test Generator', description: 'Generates unit tests for code.' } },
+                { id: 'end', type: 'end', position: { x: 350, y: 750 }, data: { label: 'End' } },
             ],
             edges: [
-                { id: 'e1-2', source: '1', target: '2', animated: true },
-                { id: 'e2-3', source: '2', target: '3', animated: true },
+                { id: 'e-start-code', source: 'start', target: 'code-gen', animated: true },
+                { id: 'e-code-review', source: 'code-gen', target: 'review', animated: true },
+                { id: 'e-review-test', source: 'review', target: 'test-gen', animated: true },
+                { id: 'e-test-end', source: 'test-gen', target: 'end', animated: true },
             ]
         }
     },
@@ -23,11 +26,15 @@ export const workflowTemplates: { name: string; description: string; workflow: {
         description: 'Generate UI components and then write documentation for them.',
         workflow: {
             nodes: [
-                { id: '1', type: 'agent', position: { x: 100, y: 100 }, data: { agentType: 'ui', label: 'UI Designer', description: 'Generates UI from a prompt.' } },
-                { id: '2', type: 'agent', position: { x: 400, y: 100 }, data: { agentType: 'docs', label: 'Docs Writer', description: 'Writes documentation.' } },
+                { id: 'start', type: 'start', position: { x: 350, y: 25 }, data: { label: 'Start' } },
+                { id: 'ui-design', type: 'agent', position: { x: 100, y: 150 }, data: { agentType: 'ui', label: 'UI Designer', description: 'Generates UI from a prompt.' } },
+                { id: 'docs-write', type: 'agent', position: { x: 400, y: 150 }, data: { agentType: 'docs', label: 'Docs Writer', description: 'Writes documentation.' } },
+                { id: 'end', type: 'end', position: { x: 350, y: 300 }, data: { label: 'End' } },
             ],
             edges: [
-                { id: 'e1-2', source: '1', target: '2', animated: true },
+                { id: 'e-start-ui', source: 'start', target: 'ui-design', animated: true },
+                { id: 'e-ui-docs', source: 'ui-design', target: 'docs-write', animated: true },
+                { id: 'e-docs-end', source: 'docs-write', target: 'end', animated: true },
             ]
         }
     }

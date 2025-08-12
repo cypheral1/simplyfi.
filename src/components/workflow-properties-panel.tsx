@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect } from 'react';
@@ -40,7 +39,7 @@ export default function WorkflowPropertiesPanel() {
           <CardDescription>Select a node to view its properties.</CardDescription>
         </CardHeader>
         <CardContent className='text-center text-muted-foreground pt-10'>
-          <p>No node selected</p>
+          <p>No agent node selected</p>
         </CardContent>
       </Card>
     );
