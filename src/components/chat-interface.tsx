@@ -10,11 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-
-type Message = {
-  role: 'user' | 'assistant';
-  content: string;
-};
+import { useChatStore, type Message } from '@/stores/chat-store';
 
 const promptSuggestions = [
     { icon: <Code className="h-4 w-4" />, text: 'Generate a Python function' },
@@ -23,7 +19,7 @@ const promptSuggestions = [
 ]
 
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { messages, addMessage } = useChatStore();
   const [input, setInput] = useState('');
   const [isGenerating, startGenerateTransition] = useTransition();
   const { toast } = useToast();
@@ -43,21 +39,21 @@ export default function ChatInterface() {
     if (!input.trim() || isGenerating) return;
 
     const userMessage: Message = { role: 'user', content: input };
-    setMessages(prev => [...prev, userMessage]);
+    addMessage(userMessage);
     setInput('');
     
     startGenerateTransition(async () => {
       const result = await conversationalCodeGenerationAction({ prompt: input });
       if (result.success && result.response) {
         const assistantMessage: Message = { role: 'assistant', content: result.response };
-        setMessages(prev => [...prev, assistantMessage]);
+        addMessage(assistantMessage);
       } else {
         toast({
           title: 'An error occurred',
           description: result.error || 'Failed to get a response.',
           variant: 'destructive',
         });
-        setMessages(prev => prev.slice(0, prev.length - 1));
+        // Note: We don't remove the user message on failure anymore as it's in the store
       }
     });
   };

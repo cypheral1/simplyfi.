@@ -6,10 +6,24 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Label } from "@/components/ui/label";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { Check, Trash2, Bot, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useChatStore } from "@/stores/chat-store";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const themes = [
   { name: "Default", theme: "default", color: "#A020F0" },
@@ -47,6 +61,7 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const { messages, clearHistory } = useChatStore();
 
   const [currentColorTheme, setCurrentColorTheme] = React.useState('default');
   const [customColor, setCustomColor] = React.useState(themes[0].color);
@@ -142,10 +157,18 @@ export default function SettingsPage() {
         applyPredefinedTheme(savedColorTheme, false);
     }
   };
+
+  const handleClearHistory = () => {
+    clearHistory();
+    toast({
+        title: "Chat History Cleared",
+        description: "Your Vibe Code conversation history has been deleted."
+    })
+  }
   
   return (
     <div className="flex justify-center items-start pt-16 h-[calc(100vh-4.1rem)]">
-      <Card className="w-full max-w-2xl">
+      <Card className="w-full max-w-4xl">
         <CardHeader>
           <CardTitle>Settings</CardTitle>
           <CardDescription>Manage your application settings.</CardDescription>
@@ -199,6 +222,68 @@ export default function SettingsPage() {
                 />
             </div>
           </div>
+          
+           <div className="space-y-4">
+             <div className="flex items-center justify-between">
+                <Label className="text-base">Vibe Code Chat History</Label>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" disabled={messages.length === 0}>
+                        <Trash2 className="mr-2 h-4 w-4" /> Clear History
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete your chat history.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleClearHistory}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+             </div>
+             <Card className="h-96">
+                <ScrollArea className="h-full">
+                    <CardContent className="p-6">
+                    {messages.length > 0 ? (
+                        <div className="space-y-6">
+                        {messages.map((message, index) => (
+                            <div key={index} className={cn("flex items-start gap-4", message.role === 'user' ? 'justify-end' : '')}>
+                                {message.role === 'assistant' && (
+                                    <Avatar className="h-8 w-8 border">
+                                        <AvatarFallback><Bot size={20} /></AvatarFallback>
+                                    </Avatar>
+                                )}
+                                <div className={cn(
+                                    "max-w-[80%] rounded-lg p-3 text-sm whitespace-pre-wrap font-code",
+                                    message.role === 'user'
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted"
+                                )}>
+                                    {message.content}
+                                </div>
+                                {message.role === 'user' && (
+                                    <Avatar className="h-8 w-8 border">
+                                        <AvatarFallback><User size={20} /></AvatarFallback>
+                                    </Avatar>
+                                )}
+                            </div>
+                        ))}
+                        </div>
+                    ) : (
+                        <div className="flex h-full items-center justify-center text-muted-foreground">
+                            <p>No chat history yet.</p>
+                        </div>
+                    )}
+                    </CardContent>
+                </ScrollArea>
+             </Card>
+           </div>
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
             <Button variant="outline" onClick={handleReset}>Reset</Button>
