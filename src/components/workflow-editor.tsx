@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import ReactFlow, {
   Controls,
   Background,
@@ -12,16 +12,19 @@ import ReactFlow, {
   type OnConnect,
   type NodeTypes,
   useReactFlow,
+  Panel,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { AgentNode } from './agent-node';
 import type { AgentNodeData } from '@/lib/types';
+import { Button } from './ui/button';
+import { Trash2 } from 'lucide-react';
 
 export default function WorkflowEditor() {
-    const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } = useWorkflowStore();
-    const { screenToFlowPosition } = useReactFlow();
+    const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode, setSelectedNodeId, selectedNodeId } = useWorkflowStore();
+    const { screenToFlowPosition, getNodes } = useReactFlow();
 
     const nodeTypes: NodeTypes = useMemo(() => ({ 
         agent: AgentNode 
@@ -62,6 +65,22 @@ export default function WorkflowEditor() {
         [screenToFlowPosition, addNode]
     );
 
+    const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+        setSelectedNodeId(node.id);
+    }, [setSelectedNodeId]);
+
+    const onPaneClick = useCallback(() => {
+        setSelectedNodeId(null);
+    }, [setSelectedNodeId])
+
+    const handleDeleteNode = () => {
+        if(selectedNodeId) {
+            const newNodes = getNodes().filter(n => n.id !== selectedNodeId);
+            onNodesChange(newNodes.map(n => ({id: n.id, type: 'remove'})));
+            setSelectedNodeId(null);
+        }
+    }
+
     return (
         <ReactFlow
             nodes={nodes}
@@ -71,12 +90,19 @@ export default function WorkflowEditor() {
             onConnect={onConnect}
             onDrop={onDrop}
             onDragOver={onDragOver}
+            onNodeClick={onNodeClick}
+            onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
             fitView
             className="bg-background"
         >
             <Background />
             <Controls />
+             <Panel position="top-right">
+                <Button variant="destructive" size="icon" onClick={handleDeleteNode} disabled={!selectedNodeId}>
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+            </Panel>
         </ReactFlow>
     );
 }

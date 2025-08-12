@@ -16,6 +16,7 @@ import type { AgentNodeData } from '@/lib/types';
 type WorkflowState = {
     nodes: Node<AgentNodeData>[];
     edges: Edge[];
+    selectedNodeId: string | null;
     onNodesChange: OnNodesChange;
     onEdgesChange: OnEdgesChange;
     onConnect: OnConnect;
@@ -23,11 +24,14 @@ type WorkflowState = {
     setNodes: (nodes: Node<AgentNodeData>[], fromTemplate?: boolean) => void;
     setEdges: (edges: Edge[]) => void;
     updateNodeStatus: (nodeId: string, status: AgentNodeData['status']) => void;
+    setSelectedNodeId: (nodeId: string | null) => void;
+    updateNodeData: (nodeId: string, data: Partial<AgentNodeData>) => void;
 };
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     nodes: [],
     edges: [],
+    selectedNodeId: null,
     onNodesChange: (changes) => {
         set({
             nodes: applyNodeChanges(changes, get().nodes),
@@ -60,11 +64,23 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         set({
             nodes: get().nodes.map((node) => {
                 if (node.id === nodeId) {
-                    // This creates a new data object to ensure React Flow detects the change
                     return { ...node, data: { ...node.data, status } };
                 }
                 return node;
             }),
         });
     },
+    setSelectedNodeId: (nodeId) => {
+        set({ selectedNodeId: nodeId });
+    },
+    updateNodeData: (nodeId, data) => {
+        set({
+            nodes: get().nodes.map((node) => {
+                if (node.id === nodeId) {
+                    return { ...node, data: { ...node.data, ...data } };
+                }
+                return node;
+            })
+        })
+    }
 }));

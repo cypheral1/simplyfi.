@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useTransition } from 'react';
@@ -16,6 +15,7 @@ import { useWorkflowStore } from '@/stores/workflow-store';
 import { executeWorkflowAction } from '@/app/ai-workflows/actions';
 import { useToast } from '@/hooks/use-toast';
 import type { Node as ReactFlowNode } from 'reactflow';
+import WorkflowPropertiesPanel from './workflow-properties-panel';
 
 export default function WorkflowView() {
     const { nodes, edges, updateNodeStatus } = useWorkflowStore();
@@ -38,7 +38,8 @@ export default function WorkflowView() {
             if (edges.length > 0) {
                  const nodeMap = new Map(nodes.map(n => [n.id, n]));
                  const edgeMap = new Map(edges.map(e => [e.source, e]));
-                 let currentNodeId = edges[0].source;
+                 let currentNodeId = edges.length > 0 ? edges.find(e => !edges.some(e2 => e2.target === e.source))?.source : nodes[0]?.id;
+                 
                  while(currentNodeId && sortedNodes.length < nodes.length) {
                     const node = nodeMap.get(currentNodeId);
                     if (node) {
@@ -48,7 +49,7 @@ export default function WorkflowView() {
                     } else { break; }
                 }
             } else if (nodes.length > 0) {
-                sortedNodes = [nodes[0]];
+                sortedNodes = [...nodes];
             }
 
 
@@ -78,53 +79,59 @@ export default function WorkflowView() {
                     }
                 })
             }
+             setTimeout(() => {
+                nodes.forEach(node => updateNodeStatus(node.id, undefined));
+             }, 3000)
         });
     }
 
     return (
-        <ReactFlowProvider>
-            <div className="flex h-[calc(100vh-4.1rem)]">
-                <aside className="w-96 border-r bg-background p-4 flex flex-col gap-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Run Workflow</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <Textarea 
-                                placeholder="Enter your prompt here..."
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                rows={4}
-                            />
-                            <Button onClick={handleRunWorkflow} disabled={isExecuting || nodes.length === 0} className="w-full">
-                                {isExecuting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
-                                {isExecuting ? 'Executing...' : 'Run Workflow'}
-                            </Button>
-                        </CardContent>
-                    </Card>
-                    <Card className="h-full flex-1">
-                        <CardContent className="p-4 h-full">
-                           <Tabs defaultValue="agents" className="h-full flex flex-col">
-                                <TabsList className="grid w-full grid-cols-2">
-                                    <TabsTrigger value="agents"><Bot className="mr-2 h-4 w-4" /> Agents</TabsTrigger>
-                                    <TabsTrigger value="library"><Library className="mr-2 h-4 w-4" /> Library</TabsTrigger>
-                                </TabsList>
-                                <ScrollArea className="flex-1 mt-4 pr-3">
-                                    <TabsContent value="agents">
-                                        <WorkflowAgentPalette />
-                                    </TabsContent>
-                                    <TabsContent value="library">
-                                        <WorkflowLibraryPalette />
-                                    </TabsContent>
-                                </ScrollArea>
-                           </Tabs>
-                        </CardContent>
-                    </Card>
-                </aside>
-                <main className="flex-1 bg-muted/30">
+        <div className="flex h-[calc(100vh-4.1rem)]">
+            <aside className="w-80 border-r bg-background p-4 flex flex-col gap-4">
+                <Card>
+                    <CardHeader className='p-4'>
+                        <CardTitle>Run Workflow</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 space-y-4">
+                        <Textarea 
+                            placeholder="Enter your prompt here..."
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            rows={3}
+                        />
+                        <Button onClick={handleRunWorkflow} disabled={isExecuting || nodes.length === 0} className="w-full">
+                            {isExecuting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
+                            {isExecuting ? 'Executing...' : 'Run Workflow'}
+                        </Button>
+                    </CardContent>
+                </Card>
+                <Card className="h-full flex-1">
+                    <CardContent className="p-0 h-full">
+                       <Tabs defaultValue="agents" className="h-full flex flex-col">
+                            <TabsList className="grid w-full grid-cols-2 rounded-none rounded-t-lg border-b">
+                                <TabsTrigger value="agents"><Bot className="mr-2 h-4 w-4" /> Agents</TabsTrigger>
+                                <TabsTrigger value="library"><Library className="mr-2 h-4 w-4" /> Library</TabsTrigger>
+                            </TabsList>
+                            <ScrollArea className="flex-1">
+                                <TabsContent value="agents" className='p-4'>
+                                    <WorkflowAgentPalette />
+                                </TabsContent>
+                                <TabsContent value="library" className='p-4'>
+                                    <WorkflowLibraryPalette />
+                                </TabsContent>
+                            </ScrollArea>
+                       </Tabs>
+                    </CardContent>
+                </Card>
+            </aside>
+            <main className="flex-1 bg-muted/30">
+                 <ReactFlowProvider>
                     <WorkflowEditor />
-                </main>
-            </div>
-        </ReactFlowProvider>
+                </ReactFlowProvider>
+            </main>
+            <aside className="w-96 border-l bg-background p-4">
+                <WorkflowPropertiesPanel />
+            </aside>
+        </div>
     );
 }
