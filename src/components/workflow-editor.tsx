@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import ReactFlow, {
   Controls,
   Background,
@@ -19,7 +19,7 @@ import { AgentNode } from './agent-node';
 import type { AgentNodeData } from '@/lib/types';
 
 function WorkflowEditorComponent() {
-    const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } = useWorkflowStore();
+    const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode, setSelectedNode } = useWorkflowStore();
     const { screenToFlowPosition } = useReactFlow();
 
     const nodeTypes: NodeTypes = useMemo(() => ({ 
@@ -61,6 +61,15 @@ function WorkflowEditorComponent() {
         [screenToFlowPosition, addNode]
     );
 
+    const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+        setSelectedNode(node.id);
+    }, [setSelectedNode]);
+
+    const onPaneClick = useCallback(() => {
+        setSelectedNode(null);
+    }, [setSelectedNode]);
+
+
     return (
         <ReactFlow
             nodes={nodes}
@@ -70,6 +79,8 @@ function WorkflowEditorComponent() {
             onConnect={onConnect}
             onDrop={onDrop}
             onDragOver={onDragOver}
+            onNodeClick={onNodeClick}
+            onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
             fitView
             className="bg-background"
