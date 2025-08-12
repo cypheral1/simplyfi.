@@ -1,10 +1,15 @@
 
+"use client";
+
 import { CodeXml, LayoutTemplate, Settings, Bot, Waypoints } from 'lucide-react';
-import { ThemeToggle } from '@/components/theme-toggle';
 import Link from 'next/link';
 import { Button } from './ui/button';
+import { useTranslation } from '@/hooks/use-translation';
+import { ThemeToggle } from './theme-toggle';
 
 export default function Header() {
+  const { t } = useTranslation();
+
   return (
     <header className="border-b">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
@@ -18,15 +23,15 @@ export default function Header() {
           <nav className="flex items-center gap-4">
              <Link href="/" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
               <Bot className="h-5 w-5" />
-              <span>Vibe Code Mode</span>
+              <span>Vibe Code {t.header.vibeCodeMode}</span>
             </Link>
             <Link href="/ui-builder" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
               <LayoutTemplate className="h-5 w-5" />
-              <span>UI Builder</span>
+              <span>{t.header.uiBuilder}</span>
             </Link>
              <Link href="/ai-workflows" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
               <Waypoints className="h-5 w-5" />
-              <span>AI Workflows</span>
+              <span>{t.header.aiWorkflows}</span>
             </Link>
           </nav>
         </div>
@@ -34,7 +39,7 @@ export default function Header() {
           <Link href="/settings">
             <Button variant="ghost" size="icon">
               <Settings className="h-5 w-5" />
-              <span className="sr-only">Settings</span>
+              <span className="sr-only">{t.header.settings}</span>
             </Button>
           </Link>
           <ThemeToggle />

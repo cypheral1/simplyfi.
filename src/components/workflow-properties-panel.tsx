@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect } from 'react';
@@ -8,9 +9,11 @@ import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import type { AgentNodeData } from '@/lib/types';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function WorkflowPropertiesPanel() {
   const { selectedNode, updateNodeData } = useWorkflowStore();
+  const { t } = useTranslation();
   
   const { register, watch, reset } = useForm<AgentNodeData>({
     defaultValues: selectedNode?.data
@@ -35,11 +38,11 @@ export default function WorkflowPropertiesPanel() {
     return (
       <Card className="m-4 h-full">
         <CardHeader>
-          <CardTitle>Properties</CardTitle>
-          <CardDescription>Select a node to view its properties.</CardDescription>
+          <CardTitle>{t.workflow.properties.title}</CardTitle>
+          <CardDescription>{t.workflow.properties.selectNode}</CardDescription>
         </CardHeader>
         <CardContent className='text-center text-muted-foreground pt-10'>
-          <p>No agent node selected</p>
+          <p>{t.workflow.properties.noNodeSelected}</p>
         </CardContent>
       </Card>
     );
@@ -48,20 +51,20 @@ export default function WorkflowPropertiesPanel() {
   return (
     <Card className="m-4 h-full">
       <CardHeader>
-        <CardTitle>Agent Properties</CardTitle>
-        <CardDescription>Editing node: {selectedNode.data.label}</CardDescription>
+        <CardTitle>{t.workflow.properties.agentProperties}</CardTitle>
+        <CardDescription>{t.workflow.properties.editingNode}: {selectedNode.data.label}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="label">Label</Label>
+          <Label htmlFor="label">{t.workflow.properties.label}</Label>
           <Input id="label" {...register('label')} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
+          <Label htmlFor="description">{t.workflow.properties.description}</Label>
           <Textarea id="description" {...register('description')} rows={3} />
         </div>
          <div className="space-y-2">
-          <Label>Agent Type</Label>
+          <Label>{t.workflow.properties.agentType}</Label>
           <Input disabled value={selectedNode.data.agentType} />
         </div>
       </CardContent>

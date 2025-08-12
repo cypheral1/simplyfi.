@@ -10,12 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useChatStore, type Message } from '@/stores/chat-store';
-
-const promptSuggestions = [
-    { icon: <Code className="h-4 w-4" />, text: 'Generate a Python function' },
-    { icon: <Brush className="h-4 w-4" />, text: 'Create a React component' },
-    { icon: <Zap className="h-4 w-4" />, text: 'Explain a code snippet' },
-]
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function ChatInterface() {
   const { messages, addMessage } = useChatStore();
@@ -26,6 +21,13 @@ export default function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
+
+  const promptSuggestions = [
+    { icon: <Code className="h-4 w-4" />, text: t.chat.prompt1 },
+    { icon: <Brush className="h-4 w-4" />, text: t.chat.prompt2 },
+    { icon: <Zap className="h-4 w-4" />, text: t.chat.prompt3 },
+  ]
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -57,8 +59,8 @@ export default function ChatInterface() {
         addMessage(assistantMessage);
       } else {
         toast({
-          title: 'An error occurred',
-          description: result.error || 'Failed to get a response.',
+          title: t.chat.errorTitle,
+          description: result.error || t.chat.errorDescription,
           variant: 'destructive',
         });
       }
@@ -79,10 +81,9 @@ export default function ChatInterface() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-        // TODO: Handle file upload and processing
         toast({
-            title: "File Selected",
-            description: `You have selected ${file.name}. Attachment processing is not yet implemented.`,
+            title: t.chat.fileSelectedTitle,
+            description: `${t.chat.fileSelectedDescription} ${file.name}. ${t.chat.fileNotImplemented}`,
         });
     }
   }
@@ -97,7 +98,7 @@ export default function ChatInterface() {
                     <Avatar className="h-16 w-16 mb-4">
                         <AvatarFallback className="bg-primary/10"><Bot size={40} className="text-primary" /></AvatarFallback>
                     </Avatar>
-                    <h2 className="text-2xl font-semibold mb-2">How can I help you today?</h2>
+                    <h2 className="text-2xl font-semibold mb-2">{t.chat.welcomeTitle}</h2>
                     <div className="flex gap-4 mt-4">
                         {promptSuggestions.map((prompt, index) => (
                              <Button key={index} variant="outline" className="gap-2" onClick={() => setInput(prompt.text)}>
@@ -153,7 +154,7 @@ export default function ChatInterface() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask me to generate some code..."
+            placeholder={t.chat.placeholder}
             className="w-full min-h-[44px] max-h-48 resize-none rounded-xl border border-input bg-transparent py-3 pl-4 pr-24 text-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
             rows={1}
             disabled={isGenerating}

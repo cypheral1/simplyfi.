@@ -39,6 +39,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Image from 'next/image';
+import { useTranslation } from '@/hooks/use-translation';
 
 
 // Component Definitions
@@ -212,15 +213,15 @@ const componentMap: { [key: string]: (props: any) => React.ReactNode } = {
         isSelected={isSelected}
     />
   ),
-  alert: ({ isSelected, ...props }) => (
-    <Alert variant={props.variant}>
+  alert: ({ isSelected, variant, title, description, ...props }) => (
+    <Alert variant={variant} {...props}>
         <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>{props.title}</AlertTitle>
-        <AlertDescription>{props.description}</AlertDescription>
+        <AlertTitle>{title}</AlertTitle>
+        <AlertDescription>{description}</AlertDescription>
     </Alert>
   ),
-  badge: ({ isSelected, ...props }) => <Badge variant={props.variant}>{props.children}</Badge>,
-  progress: ({ isSelected, ...props }) => <Progress value={props.value} />,
+  badge: ({ isSelected, ...props }) => <Badge {...props}>{props.children}</Badge>,
+  progress: ({ isSelected, ...props }) => <Progress {...props} />,
   separator: ({ isSelected, ...props }) => <Separator {...props} />,
   tabs: ({children, props}) => (
     <Tabs defaultValue={props.defaultValue || "tab1"} className="w-full">
@@ -349,6 +350,7 @@ function DroppableContainer({ id, items, onSelect, isSelected, isOver } : {id: U
     const { setNodeRef } = useDroppable({
         id
     });
+    const { t } = useTranslation();
 
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -380,7 +382,7 @@ function DroppableContainer({ id, items, onSelect, isSelected, isOver } : {id: U
                  <div className="flex-1 flex items-center justify-center pointer-events-none h-full min-h-[50px]">
                     <div className="text-center text-muted-foreground">
                         <Plus className="mx-auto h-6 w-6" />
-                        <p className="text-xs">Drag components here</p>
+                        <p className="text-xs">{t.uiBuilder.dragHere}</p>
                     </div>
                 </div>
             )}
@@ -390,14 +392,15 @@ function DroppableContainer({ id, items, onSelect, isSelected, isOver } : {id: U
 }
 
 function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedComponent: Component | null, onPropsChange: (id: UniqueIdentifier, newProps: any) => void }) {
+    const { t } = useTranslation();
     if (!selectedComponent) {
         return (
              <Card className="sticky top-4">
                 <CardHeader>
-                    <CardTitle>Properties</CardTitle>
+                    <CardTitle>{t.uiBuilder.properties.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-center text-muted-foreground">
-                    <p>Select a component to see its properties.</p>
+                    <p>{t.uiBuilder.properties.selectComponent}</p>
                 </CardContent>
             </Card>
         )
@@ -484,7 +487,7 @@ function PropertiesPanel({ selectedComponent, onPropsChange }: { selectedCompone
         <Card className="sticky top-4">
             <CardHeader>
                 <CardTitle>{selectedComponent.name}</CardTitle>
-                <CardDescriptionComponent>Type: {selectedComponent.type}</CardDescriptionComponent>
+                <CardDescriptionComponent>{t.uiBuilder.properties.type}: {selectedComponent.type}</CardDescriptionComponent>
             </CardHeader>
             <CardContent className="space-y-4">
                 {Object.entries(selectedComponent.props).map(([propName, propValue]) => renderPropEditor(propName, propValue))}
@@ -642,6 +645,7 @@ function CodeGenerationDialog({ components }: { components: Component[] }) {
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
     const [jsxCode, setJsxCode] = useState('');
+    const { t } = useTranslation();
 
     useEffect(() => {
         if(open) {
@@ -653,8 +657,8 @@ function CodeGenerationDialog({ components }: { components: Component[] }) {
     const handleSave = async () => {
         if (!componentName.match(/^[A-Z][a-zA-Z0-9]*$/)) {
             toast({
-                title: 'Invalid Component Name',
-                description: 'Component name must be PascalCase (e.g., MyComponent).',
+                title: t.uiBuilder.dialog.invalidName,
+                description: t.uiBuilder.dialog.invalidNameDesc,
                 variant: 'destructive',
             });
             return;
@@ -668,8 +672,8 @@ function CodeGenerationDialog({ components }: { components: Component[] }) {
             });
             if (result.success) {
                 toast({
-                    title: 'Component Saved!',
-                    description: `File saved at ${result.path}`,
+                    title: t.uiBuilder.dialog.saveSuccess,
+                    description: `${t.uiBuilder.dialog.saveSuccessDesc} ${result.path}`,
                 });
                 setOpen(false);
             } else {
@@ -677,8 +681,8 @@ function CodeGenerationDialog({ components }: { components: Component[] }) {
             }
         } catch (error: any) {
             toast({
-                title: 'Error Saving File',
-                description: error.message || 'An unknown error occurred.',
+                title: t.uiBuilder.dialog.saveError,
+                description: error.message || t.uiBuilder.dialog.saveErrorDesc,
                 variant: 'destructive',
             });
         } finally {
@@ -691,14 +695,14 @@ function CodeGenerationDialog({ components }: { components: Component[] }) {
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm" disabled={components.length === 0}>
                     <Code className="mr-2 h-4 w-4" />
-                    Generate Code
+                    {t.uiBuilder.dialog.generateCode}
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle>Generated JSX Code</DialogTitle>
+                    <DialogTitle>{t.uiBuilder.dialog.title}</DialogTitle>
                     <DialogDescription>
-                        Here is the code for the layout you built. You can copy it or save it as a new component file.
+                        {t.uiBuilder.dialog.description}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="relative">
@@ -709,9 +713,9 @@ function CodeGenerationDialog({ components }: { components: Component[] }) {
                         variant="ghost"
                         size="sm"
                         className="absolute top-2 right-2"
-                        onClick={() => navigator.clipboard.writeText(jsxCode).then(() => toast({ title: "Code copied!"}))}
+                        onClick={() => navigator.clipboard.writeText(jsxCode).then(() => toast({ title: t.uiBuilder.dialog.copied }))}
                     >
-                        Copy
+                        {t.uiBuilder.dialog.copy}
                     </Button>
                 </div>
                 <DialogFooter>
@@ -722,7 +726,7 @@ function CodeGenerationDialog({ components }: { components: Component[] }) {
                             onChange={(e) => setComponentName(e.target.value)}
                         />
                          <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving ? 'Saving...' : <><Download className="mr-2 h-4 w-4" /> Save as Component</>}
+                            {isSaving ? t.uiBuilder.dialog.saving : <><Download className="mr-2 h-4 w-4" /> {t.uiBuilder.dialog.saveAsComponent}</>}
                         </Button>
                     </div>
                 </DialogFooter>
@@ -736,6 +740,7 @@ export default function UiBuilderPage() {
   const [activeComponent, setActiveComponent] = useState<Component | null>(null);
   const [selectedComponentId, setSelectedComponentId] = useState<UniqueIdentifier | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const { t } = useTranslation();
   
   useEffect(() => {
     setIsClient(true);
@@ -938,7 +943,7 @@ export default function UiBuilderPage() {
   if (!isClient) {
     return (
         <div className="flex h-[calc(100vh-4.1rem)] w-full items-center justify-center">
-            <p>Loading Builder...</p>
+            <p>{t.uiBuilder.loading}</p>
         </div>
     );
   }
@@ -955,7 +960,7 @@ export default function UiBuilderPage() {
         {/* Component Palette */}
         <aside className="w-72 border-r p-4 space-y-4 bg-card overflow-y-auto">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Components</h2>
+            <h2 className="text-lg font-semibold">{t.uiBuilder.components}</h2>
             <CodeGenerationDialog components={canvasComponents} />
           </div>
           <div className="space-y-2">
