@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Label } from "@/components/ui/label";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
-import { Check, Trash2, Bot, User } from "lucide-react";
+import { Check, Trash2, Bot, User, Languages } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const themes = [
   { name: "Default", theme: "default", color: "#A020F0" },
@@ -33,6 +34,17 @@ const themes = [
   { name: "Forest", theme: "forest", color: "#228B22" },
   { name: "Sunset", theme: "sunset", color: "#FF4500" },
 ];
+
+const languages = [
+    { value: 'en', label: 'English' },
+    { value: 'hi', label: 'Hindi (हिन्दी)' },
+    { value: 'mr', label: 'Marathi (मराठी)' },
+    { value: 'te', label: 'Telugu (తెలుగు)' },
+    { value: 'kn', label: 'Kannada (ಕನ್ನಡ)' },
+    { value: 'gu', label: 'Gujarati (ગુજરાતી)' },
+    { value: 'es', label: 'Spanish (Español)' },
+    { value: 'fr', label: 'French (Français)' },
+]
 
 function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -67,14 +79,17 @@ export default function SettingsPage() {
 
   const [currentColorTheme, setCurrentColorTheme] = React.useState('default');
   const [customColor, setCustomColor] = React.useState(themes[0].color);
+  const [language, setLanguage] = React.useState('en');
 
   // Load saved settings on initial render
   React.useEffect(() => {
     const savedColorTheme = localStorage.getItem('colorTheme') || 'default';
     const savedCustomColor = localStorage.getItem('customColor') || themes.find(t => t.theme === savedColorTheme)?.color || themes[0].color;
+    const savedLanguage = localStorage.getItem('language') || 'en';
     
     setCurrentColorTheme(savedColorTheme);
     setCustomColor(savedCustomColor);
+    setLanguage(savedLanguage);
     
     if (savedColorTheme !== 'default') {
       document.documentElement.classList.add(`theme-${savedColorTheme}`);
@@ -142,17 +157,22 @@ export default function SettingsPage() {
     } else {
       applyPredefinedTheme(currentColorTheme);
     }
+    localStorage.setItem('language', language);
     toast({
       title: "Settings Saved",
-      description: "Your new theme settings have been applied.",
+      description: "Your new settings have been applied.",
     })
   }
   
   const handleReset = () => {
     const savedColorTheme = localStorage.getItem('colorTheme') || 'default';
     const savedCustomColor = localStorage.getItem('customColor') || themes.find(t => t.theme === savedColorTheme)?.color || themes[0].color;
+    const savedLanguage = localStorage.getItem('language') || 'en';
+    
     setCurrentColorTheme(savedColorTheme);
     setCustomColor(savedCustomColor);
+    setLanguage(savedLanguage);
+
     if (savedColorTheme === 'custom') {
         applyCustomTheme(savedCustomColor, false);
     } else {
@@ -228,6 +248,29 @@ export default function SettingsPage() {
             </div>
           </div>
           
+          <Separator />
+          
+           <div className="space-y-6">
+            <h3 className="text-lg font-medium">Language</h3>
+             <div className="flex items-center justify-between">
+                <Label htmlFor="language-select" className="flex items-center gap-2">
+                    <Languages className="h-5 w-5" />
+                    App Language
+                </Label>
+                <Select value={language} onValueChange={setLanguage}>
+                    <SelectTrigger className="w-[200px]" id="language-select">
+                        <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {languages.map(lang => (
+                            <SelectItem key={lang.value} value={lang.value}>{lang.label}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+           </div>
+
+
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={handleReset}>Reset</Button>
             <Button onClick={handleSave}>Save</Button>
@@ -287,6 +330,5 @@ export default function SettingsPage() {
       </Card>
     </div>
   );
-}
 
     
