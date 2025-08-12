@@ -13,7 +13,7 @@ import { Play } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { executeWorkflowAction } from '@/app/ai-workflows/actions';
-import { useToast } from './ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export default function WorkflowView() {
     const { nodes, edges, prompt, setPrompt, setNodeStatus } = useWorkflowStore();
