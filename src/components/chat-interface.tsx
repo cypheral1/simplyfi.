@@ -4,7 +4,7 @@
 import { useState, useTransition, useRef, useEffect } from 'react';
 import { conversationalCodeGenerationAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { Send, User, Bot, Loader2, Code, Brush, Zap } from 'lucide-react';
+import { Send, User, Bot, Loader2, Code, Brush, Zap, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -25,6 +25,7 @@ export default function ChatInterface() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -60,7 +61,6 @@ export default function ChatInterface() {
           description: result.error || 'Failed to get a response.',
           variant: 'destructive',
         });
-        // Note: We don't remove the user message on failure anymore as it's in the store
       }
     });
   };
@@ -71,6 +71,21 @@ export default function ChatInterface() {
       handleSubmit(e as unknown as React.FormEvent);
     }
   };
+
+  const handleAttachmentClick = () => {
+    fileInputRef.current?.click();
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        // TODO: Handle file upload and processing
+        toast({
+            title: "File Selected",
+            description: `You have selected ${file.name}. Attachment processing is not yet implemented.`,
+        });
+    }
+  }
 
 
   return (
@@ -139,10 +154,21 @@ export default function ChatInterface() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask me to generate some code..."
-            className="w-full min-h-[44px] max-h-48 resize-none rounded-xl border border-input bg-transparent py-3 pl-4 pr-14 text-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+            className="w-full min-h-[44px] max-h-48 resize-none rounded-xl border border-input bg-transparent py-3 pl-4 pr-24 text-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
             rows={1}
             disabled={isGenerating}
           />
+          <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={handleAttachmentClick}
+            disabled={isGenerating}
+            className="absolute bottom-2 right-12 h-8 w-8 rounded-lg"
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
           <Button
             type="submit"
             size="icon"
